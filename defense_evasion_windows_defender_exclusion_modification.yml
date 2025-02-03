@@ -5,7 +5,7 @@ description: >
   Detects modifications to Windows Defender exclusions.
   The rule triggers when a registry event (RegSetValue or RegDeleteValue) modifies a key 
   containing one of the Defender Exclusion paths (Paths, Extensions, or Processes) by MsMpEng.exe,
-  or when a CreateProcess event from PowerShell, CMD, or MpCmdRun.exe contains both "MpPreference" 
+  or when a CreateProcess event from MpCmdRun.exe contains both "MpPreference" 
   and "-Exclusion" in the command line.
 enabled: true
 labels:
