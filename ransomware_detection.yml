@@ -1,0 +1,74 @@
+name: Potential Ransomware Mass Encryption Detection
+id: 76285d3a-4e5c-4029-a5b7-1c2e9d4f0a6b
+version: 1.3.1
+description: >
+  Detects mass file encryption indicative of ransomware. If detected, the responsible process is **terminated immediately**.
+enabled: true
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: "https://attack.mitre.org/tactics/TA0040/"
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: "https://attack.mitre.org/techniques/T1486/"
+tags:
+  - ransomware
+  - mass encryption
+  - impact
+references:
+  - "https://attack.mitre.org/techniques/T1486/"
+  - "https://www.nomoreransom.org/en/index.html"
+  - "https://id-ransomware.malwarehunterteam.com/"
+condition: >
+  (kevt.name = 'CreateFile'
+    and file.name endswith (
+      '.akira', '.enc', '.locked', '.crypted', '.locky', '.gpg', '.aes', '.exx', '.zzz', '.crypt',
+      '.r5a', '.teslarc', '.vault', '.xtbl', '.wallet', '.lecho', '.zepto', '.crypz',
+      '.cerber', '.crypted000007', '.x3m', '.vevo', '.crytp1', '.crytp2', '.thanos',
+      '.lazarus', '.encrypted', '.paymen45', '.muhstik', '.matrix', '.stopdjvu',
+      '.boston', '.odin', '.coverton', '.sigma', '.clop', '.ryuk', '.revil', '.conti',
+      '.hive', '.lockbit', '.darkside', '.babuk', '.blackbasta', '.cuba', '.alcatraz',
+      '.egregor', '.maze', '.doppelpaymer', '.ranzy', '.snatch', '.blackmatter', '.avos',
+      '.dearcry', '.zimbra', '.mountlocker', '.sodinokibi', '.ragnar', '.n3tw0rm',
+      '.0x0', '.1999', '.*obleep', '.LOL!', '.aaa', '.abc', '.bleep', '.ccc', '.ctbl', 
+      '.ctb2', '.crinf', '.crjoker', '.diablo6', '.Lukitus', '.cry', '.crypto', '.cryptotorlocker',
+      '.darkness', '.ecc', '.EnCiPhErEd', '.crypt1', '.encrypted', '.ezz', '.frtrss',
+      '.good', '.ha3', '.hydracrypt', '.kb15', '.kraken', '.lechiffre', '.magic', 
+      '.micro', '.nochance', '.omg!', '.r16M', '.rdm', '.rrk', '.supercrypt', '.toxcrypt',
+      '.ttt', '.vvv', '.xxx', '.xrnt', '.xyz'
+    )
+    and ps.parent.name not in ('explorer.exe')
+  )
+
+  or (kevt.name = 'WriteFile'
+    and file.extension in (
+      '.akira', '.enc', '.locked', '.crypted', '.locky', '.gpg', '.aes', '.exx', '.zzz', '.crypt',
+      '.r5a', '.teslarc', '.vault', '.xtbl', '.wallet', '.lecho', '.zepto', '.crypz',
+      '.cerber', '.crypted000007', '.x3m', '.vevo', '.crytp1', '.crytp2', '.thanos',
+      '.lazarus', '.encrypted', '.paymen45', '.muhstik', '.matrix', '.stopdjvu',
+      '.boston', '.odin', '.coverton', '.sigma', '.clop', '.ryuk', '.revil', '.conti',
+      '.hive', '.lockbit', '.darkside', '.babuk', '.blackbasta', '.cuba', '.alcatraz',
+      '.egregor', '.maze', '.doppelpaymer', '.ranzy', '.snatch', '.blackmatter', '.avos',
+      '.dearcry', '.zimbra', '.mountlocker', '.sodinokibi', '.ragnar', '.n3tw0rm',
+      '.0x0', '.1999', '.*obleep', '.LOL!', '.aaa', '.abc', '.bleep', '.ccc', '.ctbl', 
+      '.ctb2', '.crinf', '.crjoker', '.diablo6', '.Lukitus', '.cry', '.crypto', '.cryptotorlocker',
+      '.darkness', '.ecc', '.EnCiPhErEd', '.crypt1', '.encrypted', '.ezz', '.frtrss',
+      '.good', '.ha3', '.hydracrypt', '.kb15', '.kraken', '.lechiffre', '.magic', 
+      '.micro', '.nochance', '.omg!', '.r16M', '.rdm', '.rrk', '.supercrypt', '.toxcrypt',
+      '.ttt', '.vvv', '.xxx', '.xrnt', '.xyz'
+    )
+    and ps.parent.name not in ('explorer.exe')
+  )
+
+
+action:
+  - name: kill
+
+output: >
+  **Potential Ransomware Detected!**
+  - **Process:** %ps.name (PID: %ps.pid) [**Terminated**]
+  - **Command Line:** %kevt.arg[cmdline]
+  - **File Name:** %file.name
+  - **File Operation:** %kevt.name
+  - **Possible Mass Encryption or Ransomware Activity**
+min-engine-version: 2.0.0
