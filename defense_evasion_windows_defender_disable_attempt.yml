@@ -1,0 +1,40 @@
+name: Windows Defender Disabling Attempt
+id: 8c2f5b7a-d93e-47f5-9b1a-3f6e8e2c91fc
+version: 1.0.0
+description: >
+  Detects attempts to disable or modify Windows Defender settings through registry changes,
+  PowerShell commands, or direct executable manipulation.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: "https://attack.mitre.org/tactics/TA0005/"
+  technique.id: T1562.001
+  technique.name: Impair Defenses - Disable or Modify Tools
+  technique.ref: "https://attack.mitre.org/techniques/T1562/001/"
+tags:
+  - windows defender
+  - defense evasion
+  - registry modification
+  - tampering
+references:
+  - "https://attack.mitre.org/techniques/T1562/001/"
+condition: >
+  (kevt.name in ('RegSetValue') 
+    and registry.key.name icontains 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring')
+    and registry.value = 1
+  or
+  (kevt.name = 'CreateProcess'
+    and ps.name in ('powershell.exe', 'cmd.exe', 'MpCmdRun.exe')
+    and kevt.arg[cmdline] contains '-DisableRealtimeMonitoring')
+  or
+  (kevt.name = 'CreateProcess'
+    and ps.name = 'MsMpEng.exe'
+    and kevt.arg[cmdline] contains '-Disable')
+output: >
+  **Windows Defender Tampering Detected!**
+  - **Process:** %ps.name (PID: %ps.pid)
+  - **Command Line:** %kevt.arg[cmdline]
+  - **Registry Key Modified:** %registry.key.name
+  - **Potential Defense Evasion Activity Detected**
+min-engine-version: 2.0.0
