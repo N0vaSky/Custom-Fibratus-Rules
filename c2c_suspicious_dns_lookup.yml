@@ -1,0 +1,74 @@
+name: Suspicious DNS Query Detection
+id: a5e6d8f2-74b1-4c3e-bb4a-9c2d58e3f0d2
+version: 1.4.0
+description: |
+  Detects suspicious DNS queries that may indicate command and control (C2), data exfiltration, 
+  or domain generation algorithms (DGA) used by malware. 
+  Also detects file-sharing services often used in infostealer malware campaigns.
+
+enabled: true
+
+labels:
+  tactic.id: TA0011
+  tactic.name: Command and Control
+  tactic.ref: https://attack.mitre.org/tactics/TA0011/
+  technique.id: T1071
+  technique.name: Application Layer Protocol
+  technique.ref: https://attack.mitre.org/techniques/T1071/
+  subtechnique.id: T1071.004
+  subtechnique.name: DNS
+  subtechnique.ref: https://attack.mitre.org/techniques/T1071/004/
+
+tags:
+  - dns exfiltration
+  - command and control
+  - dns tunneling
+  - infostealer
+  - file upload abuse
+
+references:
+  - https://attack.mitre.org/techniques/T1071/004/
+  - https://redcanary.com/threat-detection-report/dns-tunneling/
+  - https://www.sans.org/blog/detecting-dns-tunneling/
+
+condition: >
+  query_dns
+    and dns.name in (
+      'ngrok.io',
+      'pastebin.com',
+      'discordapp.com',
+      '.onion',
+      '.top',
+      '.xyz',
+      '.tk',
+      'limewire.com',
+      '.bit',
+      '.ir',
+      '.ru',
+      '.dyn',
+      '.no-ip',
+      '.duckdns',
+      'file.io',
+      'anonfiles.com',
+      'bayfiles.com',
+      'wetransfer.com',
+      'sendspace.com',
+      'filedropper.com',
+      'mega.nz',
+      'transfer.sh',
+      'pixeldrain.com',
+      'gofile.io',
+      'zippyshare.com'
+    )
+    and dns.name not contains 'microsoft.com'
+    and dns.name not contains 'windows.com'
+    and dns.name not contains 'windowsupdate.microsoft.com'
+
+output: |
+  **Suspicious DNS Query Detected!**
+  - Queried Domain: %dns.name
+  - Process: %ps.name (PID: %ps.pid)
+  - Parent Process: %ps.parent.name (PPID: %ps.ppid)
+  - **Possible Exfiltration or C2 Activity**
+
+min-engine-version: 2.0.0

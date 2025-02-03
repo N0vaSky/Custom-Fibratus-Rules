@@ -1,0 +1,114 @@
+name: VPN and Proxy Detection
+id: f9b1d2e3-82c1-4d7a-91ea-3f4cbb64a1f2
+version: 1.2.0
+description: |
+  Detects VPN and proxy usage by monitoring process executions, network connections, and DNS queries.
+
+enabled: true
+
+labels:
+  tactic.id: TA0011
+  tactic.name: Command and Control
+  tactic.ref: https://attack.mitre.org/tactics/TA0011/
+  technique.id: T1090
+  technique.name: Proxy
+  technique.ref: https://attack.mitre.org/techniques/T1090/
+
+tags:
+  - vpn
+  - proxy
+  - tunneling
+  - anonymity
+  - network obfuscation
+
+references:
+  - https://attack.mitre.org/techniques/T1090/
+  - https://www.privacyguides.org/vpn/
+  - https://portswigger.net/kb/issues/00400200_vpn-detected
+
+condition: >
+  (kevt.name = 'CreateProcess'
+    and ps.name endswith ('.exe')
+    and (
+      kevt.arg[cmdline] contains 'openvpn'
+      or kevt.arg[cmdline] contains 'wireguard'
+      or kevt.arg[cmdline] contains 'nordvpn'
+      or kevt.arg[cmdline] contains 'expressvpn'
+      or kevt.arg[cmdline] contains 'protonvpn'
+      or kevt.arg[cmdline] contains 'surfshark'
+      or kevt.arg[cmdline] contains 'cyberghost'
+      or kevt.arg[cmdline] contains 'windscribe'
+      or kevt.arg[cmdline] contains 'privateinternetaccess'
+      or kevt.arg[cmdline] contains 'mullvad'
+      or kevt.arg[cmdline] contains 'vpn.exe'
+      or kevt.arg[cmdline] contains 'proxifier'
+      or kevt.arg[cmdline] contains 'softether'
+      or kevt.arg[cmdline] contains 'hide.me'
+      or kevt.arg[cmdline] contains 'torguard'
+      or kevt.arg[cmdline] contains 'psiphon'
+      or kevt.arg[cmdline] contains 'hotspotshield'
+    ))
+
+  or (kevt.category = 'dns'
+    and dns.name in (
+      'nordvpn.com',
+      'expressvpn.com',
+      'protonvpn.com',
+      'surfshark.com',
+      'cyberghostvpn.com',
+      'windscribe.com',
+      'privateinternetaccess.com',
+      'mullvad.net',
+      'vpn.ac',
+      'hide.me',
+      'torguard.net',
+      'psiphon.ca',
+      'hotspotshield.com',
+      'openvpn.net',
+      'wireguard.com',
+      'softether.org',
+      'proxybay.github.io',
+      'whoer.net',
+      'proxylist.com',
+      'proxifier.com',
+      'vpnbook.com'
+    ))
+
+  or (kevt.category = 'network'
+    and ps.name endswith ('.exe')
+    and net.dip.names in (
+      'nordvpn.com',
+      'expressvpn.com',
+      'protonvpn.com',
+      'surfshark.com',
+      'cyberghostvpn.com',
+      'windscribe.com',
+      'privateinternetaccess.com',
+      'mullvad.net',
+      'vpn.ac',
+      'hide.me',
+      'torguard.net',
+      'psiphon.ca',
+      'hotspotshield.com',
+      'openvpn.net',
+      'wireguard.com',
+      'softether.org',
+      'proxybay.github.io',
+      'whoer.net',
+      'proxylist.com',
+      'proxifier.com',
+      'vpnbook.com'
+    )
+    and net.dport in (443, 1080, 1194, 500, 4500, 1723, 51820, 8282))
+
+output: |
+  **VPN or Proxy Usage Detected!**
+  - **Process:** %ps.name (PID: %ps.pid)
+  - **Command Line:** %kevt.arg[cmdline]
+  - **Executable Path:** %ps.exe
+  - **Parent Process:** %ps.parent.name (PPID: %ps.ppid)
+  - **DNS Query:** %dns.name
+  - **Network Connection:** %net.dip:%net.dport → %net.sip:%net.sport
+  - **Possible Anonymization or Tunneling Activity**
+
+min-engine-version: 2.0.0

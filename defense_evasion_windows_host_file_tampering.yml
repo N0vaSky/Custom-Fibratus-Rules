@@ -1,0 +1,49 @@
+name: Windows Hosts File Tampering 
+id: f7b2c9d3-99e7-41d5-bb4a-6ea1a5f7f9e2
+version: 1.0.0
+description: >
+  Detects when a known text editor opens the Windows Hosts file via a CreateFile event.
+  This rule aims to catch potential tampering when the hosts file is opened by an editor,
+  which may indicate unauthorized modifications.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: 'https://attack.mitre.org/tactics/TA0005/'
+  technique.id: T1562.001
+  technique.name: Impair Defenses - Disable or Modify Tools
+  technique.ref: 'https://attack.mitre.org/techniques/T1562/001/'
+tags:
+  - hosts file
+  - tampering
+  - defense evasion
+  - text editor
+references:
+  - 'https://attack.mitre.org/techniques/T1562/001/'
+  - 'https://www.microsoft.com/security/blog/2020/07/15/malicious-manipulation-of-hosts-file-blocking-windows-update/'
+condition: >
+  kevt.name = 'CreateFile'
+  and file.name contains '\\Windows\\System32\\drivers\\etc\\hosts'
+  and ps.name in (
+    'notepad.exe',
+    'wordpad.exe',
+    'notepad++.exe',
+    'sublime_text.exe',
+    'code.exe',
+    'atom.exe',
+    'ultraedit.exe',
+    'textpad.exe',
+    'editpadlite.exe',
+    'brackets.exe',
+    'komodoedit.exe',
+    'gvim.exe',
+    'vim.exe',
+    'emacs.exe'
+  )
+
+output: >
+  **Windows Hosts File Tampering Detected (CreateFile)!**
+  - **Process:** %ps.name (PID: %ps.pid)
+  - **File Opened:** %file.name
+  - **Command Line:** %kevt.arg[cmdline]
+min-engine-version: 2.0.0

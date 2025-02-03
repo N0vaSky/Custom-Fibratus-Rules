@@ -1,0 +1,46 @@
+name: Registry Run Key/Startup Persistence via Script Host or Untrusted Process
+id: cc41ee3a-6e44-4903-85a4-0147ec6a7eea
+version: 1.0.2
+description: |
+  Detects suspicious attempts to establish persistence by modifying Registry Run keys or
+  Startup folder entries. This rule targets events where a script interpreter (or its parent)
+  or an untrusted process creates or modifies these well-known autostart locations,
+  which adversaries often abuse to maintain persistence across reboots.
+labels:
+  tactic.id: TA0006
+  tactic.name: Persistence
+  tactic.ref: https://attack.mitre.org/tactics/TA0006/
+  technique.id: T1547
+  technique.name: Boot or Logon Autostart Execution
+  technique.ref: https://attack.mitre.org/techniques/T1547/
+  subtechnique.id: T1547.001
+  subtechnique.name: Registry Run Keys / Startup Folder
+  subtechnique.ref: https://attack.mitre.org/techniques/T1547/001/
+condition: >
+  (modify_registry or create_file)
+    and
+  (
+    ps.name in script_interpreters
+      or
+    ps.parent.name in script_interpreters
+      or
+    pe.is_trusted = false
+  )
+    and
+  (
+    registry.key.name imatches registry_run_keys
+      or
+    file.name imatches startup_locations
+  )
+    and
+    not
+  ps.exe imatches
+    (
+      '?:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+      '?:\\Program Files (x86)\\Microsoft\\Edge\\Application\\*\\msedge.exe',
+      '?:\\Program Files\\Microsoft\\Edge\\Application\\*\\msedge.exe'
+    )
+action:
+  - name: kill
+
+min-engine-version: 2.0.0

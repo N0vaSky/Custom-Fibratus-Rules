@@ -1,0 +1,65 @@
+name: Reverse Shell & Remote Script Execution Detection
+id: e74b8d1a-6a9d-4f8a-b1ef-2e24c9b3e9fc
+version: 1.0.0
+description: |
+  Detects the execution of remote command shells and suspicious script-based network activity, including reverse shells and PowerShell commands used to download or execute payloads from the internet. This activity is commonly associated with command and control (C2) frameworks, initial access footholds, and post-exploitation techniques.
+
+enabled: true
+labels:
+  tactic.id: TA0011
+  tactic.name: Command and Control
+  tactic.ref: https://attack.mitre.org/tactics/TA0011/
+  technique.id: T1059
+  technique.name: Command and Scripting Interpreter
+  technique.ref: https://attack.mitre.org/techniques/T1059/
+  subtechnique.id: T1059.003
+  subtechnique.name: Windows Command Shell
+  subtechnique.ref: https://attack.mitre.org/techniques/T1059/003/
+
+tags:
+  - reverse shell
+  - command and control
+  - persistence
+
+references:
+  - https://attack.mitre.org/techniques/T1059/003/
+  - https://pentestlab.blog/2020/02/06/reverse-shells/
+
+condition: >
+  spawn_process
+    and ps.name in ('cmd.exe', 'powershell.exe', 'bash.exe', 'sh.exe', 'powershell', 'ncat')
+    and ps.cmdline contains 'nc '
+    or ps.cmdline contains 'ncat '
+    or ps.cmdline contains 'invoke-webrequest '
+    or ps.cmdline contains 'curl '
+    or ps.cmdline contains 'wget '
+    or ps.cmdline contains 'bash -i'
+    or ps.cmdline contains '0<&196;exec 196<>/dev/tcp/'
+    or ps.cmdline contains 'python -c'
+    or ps.cmdline contains 'perl -e'
+    or ps.cmdline contains 'php -r'
+    or ps.cmdline contains 'iwr'
+    or ps.cmdline contains 'iex'
+    or ps.cmdline contains 'socat'
+    or kevt.arg[cmdline] contains 'nc '
+    or kevt.arg[cmdline] contains 'ncat '
+    or kevt.arg[cmdline] contains 'invoke-webrequest '
+    or kevt.arg[cmdline] contains 'curl '
+    or kevt.arg[cmdline] contains 'wget '
+    or kevt.arg[cmdline] contains 'bash -i'
+    or kevt.arg[cmdline] contains '0<&196;exec 196<>/dev/tcp/'
+    or kevt.arg[cmdline] contains 'python -c'
+    or kevt.arg[cmdline] contains 'perl -e'
+    or kevt.arg[cmdline] contains 'php -r'
+    or kevt.arg[cmdline] contains 'iwr'
+    or kevt.arg[cmdline] contains 'iex'
+    or kevt.arg[cmdline] contains 'socat'
+    and ps.parent.name not in ('explorer.exe', 'services.exe', 'svchost.exe')
+
+output: |
+  Detected potential reverse shell attempt!
+  Process: `%ps.name` (PID: %ps.pid)
+  Full Command Line: `%ps.cmdline`
+  Parent Process: `%ps.parent.name` (PPID: %ps.ppid)
+
+min-engine-version: 2.0.0
