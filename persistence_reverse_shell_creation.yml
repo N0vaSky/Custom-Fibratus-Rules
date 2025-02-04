@@ -59,6 +59,7 @@ condition: >
     and not kevt.arg[cmdline] contains 'C:\\WINDOWS\\system32\\*'
     and not ps.exe contains 'C:\\Windows\\System32\\*'
     and not ps.exe contains 'C:\\Windows\\SysWOW64\\*'
+    and not kevt.arg[exe] contains 'C:\\Program Files\\WinRAR\\WinRAR.exe'
 
 output: |
   Detected potential reverse shell attempt!
