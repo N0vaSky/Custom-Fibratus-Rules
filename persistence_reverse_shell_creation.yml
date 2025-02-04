@@ -54,9 +54,11 @@ condition: >
     or kevt.arg[cmdline] contains 'iwr'
     or kevt.arg[cmdline] contains 'iex'
     or kevt.arg[cmdline] contains 'socat'
-    and ps.parent.name not in ('explorer.exe', 'services.exe', 'svchost.exe', 'wininit.exe')
+    and not ps.parent.name in ('services.exe', 'svchost.exe', 'explorer.exe', 'wininit.exe', 'taskhost.exe')
     and not kevt.arg[exe] startswith 'C:\\WINDOWS\\system32\\'
     and not kevt.arg[cmdline] contains 'C:\\WINDOWS\\system32\\'
+    and not ps.exe contains 'C:\\Windows\\System32\\'
+    and not ps.exe contains 'C:\\Windows\\SysWOW64\\'
 
 output: |
   Detected potential reverse shell attempt!
