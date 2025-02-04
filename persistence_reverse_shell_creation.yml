@@ -55,10 +55,9 @@ condition: >
     or kevt.arg[cmdline] contains 'iex'
     or kevt.arg[cmdline] contains 'socat'
     and not ps.parent.name in ('services.exe', 'svchost.exe', 'explorer.exe', 'wininit.exe', 'taskhost.exe')
-    and not kevt.arg[exe] startswith 'C:\\WINDOWS\\system32\\*'
-    and not kevt.arg[cmdline] contains 'C:\\WINDOWS\\system32\\*'
-    and not ps.exe contains 'C:\\Windows\\System32\\*'
-    and not ps.exe contains 'C:\\Windows\\SysWOW64\\*'
+    and not ps.cmdline imatches '?:\\Windows\\System32\\*'
+    and not ps.exe imatches '?:\\Windows\\System32\\*'
+    and not ps.exe imatches '?:\\Windows\\SysWOW64\\*'
     and not kevt.arg[exe] contains 'C:\\Program Files\\WinRAR\\WinRAR.exe'
 
 output: |
