@@ -1,9 +1,9 @@
 name: Windows Defender Disabling Attempt
 id: 8c2f5b7a-d93e-47f5-9b1a-3f6e8e2c91fc
-version: 1.0.0
+version: 1.3.0
 description: >
-  Detects attempts to disable or modify Windows Defender settings through registry changes,
-  PowerShell commands, or direct executable manipulation.
+  Detects attempts to disable or modify Windows Defender settings via registry changes, PowerShell commands, 
+  process execution, or service manipulation (WinDefend, Sense, WdNisSvc).
 enabled: true
 labels:
   tactic.id: TA0005
@@ -19,22 +19,35 @@ tags:
   - tampering
 references:
   - "https://attack.mitre.org/techniques/T1562/001/"
+
 condition: >
-  (kevt.name in ('RegSetValue') 
-    and registry.key.name icontains 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring')
+  (
+    kevt.name in ('RegSetValue', 'RegDeleteValue')
+    and (
+      registry.key.name contains 'Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
+      or registry.key.name contains 'Windows Defender\\DisableAntiSpyware'
+      or registry.key.name contains 'Windows Defender\\DisableBehaviorMonitoring'
+    )
     and registry.value = 1
+  )
   or
-  (kevt.name = 'CreateProcess'
-    and ps.name in ('powershell.exe', 'cmd.exe', 'MpCmdRun.exe')
-    and kevt.arg[cmdline] contains '-DisableRealtimeMonitoring')
-  or
-  (kevt.name = 'CreateProcess'
-    and ps.name = 'MsMpEng.exe'
-    and kevt.arg[cmdline] contains '-Disable')
+  (
+    kevt.name = 'CreateProcess'
+    and ps.name in ('sc.exe', 'wmic.exe', 'powershell.exe', 'cmd.exe')
+    and (
+      kevt.arg[cmdline] contains 'stop WinDefend'
+      or kevt.arg[cmdline] contains 'stop Sense'
+      or kevt.arg[cmdline] contains 'stop WdNisSvc'
+      or kevt.arg[cmdline] contains 'config WinDefend start= disabled'
+      or kevt.arg[cmdline] contains 'config Sense start= disabled'
+      or kevt.arg[cmdline] contains 'config WdNisSvc start= disabled'
+    )
+  )
 output: >
   **Windows Defender Tampering Detected!**
   - **Process:** %ps.name (PID: %ps.pid)
   - **Command Line:** %kevt.arg[cmdline]
   - **Registry Key Modified:** %registry.key.name
+  - **Defender Service Status Change Detected**
   - **Potential Defense Evasion Activity Detected**
 min-engine-version: 2.0.0
