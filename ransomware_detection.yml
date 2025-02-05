@@ -35,7 +35,7 @@ condition: >
       '.darkness', '.ecc', '.EnCiPhErEd', '.crypt1', '.encrypted', '.ezz', '.frtrss',
       '.good', '.ha3', '.hydracrypt', '.kb15', '.kraken', '.lechiffre', '.magic', 
       '.micro', '.nochance', '.omg!', '.r16M', '.rdm', '.rrk', '.supercrypt', '.toxcrypt',
-      '.ttt', '.vvv', '.xxx', '.xrnt', '.xyz', '.wasted', 'wcry', 'wannacry', 'baea' )
+      '.ttt', '.vvv', '.xxx', '.xrnt', '.xyz', '.wasted', 'wcry', 'wannacry', 'baea', 'wnry' )
     )
     and ps.parent.name not in ('explorer.exe')
     and ps.name not in ('SearchProtocolHost.exe')
@@ -57,7 +57,7 @@ condition: >
       '.darkness', '.ecc', '.EnCiPhErEd', '.crypt1', '.encrypted', '.ezz', '.frtrss',
       '.good', '.ha3', '.hydracrypt', '.kb15', '.kraken', '.lechiffre', '.magic', 
       '.micro', '.nochance', '.omg!', '.r16M', '.rdm', '.rrk', '.supercrypt', '.toxcrypt',
-      '.ttt', '.vvv', '.xxx', '.xrnt', '.xyz', '.wasted' 'wcry', 'wannacry', 'baea' )
+      '.ttt', '.vvv', '.xxx', '.xrnt', '.xyz', '.wasted' 'wcry', 'wannacry', 'baea', 'wnry' )
     )
     and ps.parent.name not in ('explorer.exe')
     and ps.name not in ('SearchProtocolHost.exe')
