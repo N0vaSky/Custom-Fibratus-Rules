@@ -1,8 +1,8 @@
 name: Potential Ransomware Mass Encryption Detection
 id: 76285d3a-4e5c-4029-a5b7-1c2e9d4f0a6b
-version: 1.3.1
+version: 1.3.2
 description: >
-  Detects mass file encryption indicative of ransomware. If detected, the responsible process is **terminated immediately**.
+  Detects mass file encryption and common ransomware-related commands. If detected, the responsible process is **terminated immediately**.
 enabled: true
 labels:
   tactic.id: TA0040
@@ -38,6 +38,8 @@ condition: >
       '.ttt', '.vvv', '.xxx', '.xrnt', '.xyz', '.wasted'
     )
     and ps.parent.name not in ('explorer.exe')
+    and ps.name not in ('SearchProtocolHost.exe')
+    and not ps.exe matches '?:\\WINDOWS\\system32\\*'
   )
 
   or (kevt.name = 'WriteFile'
@@ -58,8 +60,29 @@ condition: >
       '.ttt', '.vvv', '.xxx', '.xrnt', '.xyz', '.wasted'
     )
     and ps.parent.name not in ('explorer.exe')
+    and ps.name not in ('SearchProtocolHost.exe')
+    and not ps.exe matches '?:\\WINDOWS\\system32\\*'
   )
 
+  or (kevt.name = 'CreateProcess' and kevt.arg[cmdline] imatches (
+    '*vssadmin.exe delete shadows /all*',
+    '*vssadmin.exe resize shadowstorage*',
+    '*bcdedit.exe /set default recoveryenabled No*',
+    '*bcdedit.exe /set default bootstatuspolicy ignoreallfailures*',
+    '*Get-WmiObject Win32_Shadowcopy | ForEach-Object{$_.Delete*',
+    '*reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced /f /v HideFileExt*',
+    '*reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced /f /v Hidden*',
+    '*reg add HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced /f /v EnableLUA*',
+    '*reg add HKCU\\Control Panel\\Desktop /v Wallpaper*',
+    '*Set-MpPreference -DisableArchiveScanning $true*',
+    '*Set-MpPreference -DisableBlockAtFirstSeen $true*',
+    '*icacls . /grant Everyone:F /T /C /Q*',
+    '*icacls * /deny *S-1-1-0:(OI)(CI)(DE,DC)*',
+    '*wmic.exe shadowcopy delete*',
+    '*net.exe stop vss*',
+    '*net.exe stop McAfeeDLPAgentService*',
+    '*schtasks /create /sc onlogon*'
+  ))
 
 action:
   - name: kill
@@ -71,4 +94,5 @@ output: >
   - **File Name:** %file.name
   - **File Operation:** %kevt.name
   - **Possible Mass Encryption or Ransomware Activity**
+
 min-engine-version: 2.0.0
