@@ -1,5 +1,5 @@
 name: File-to-File with Delete
-id: bd306ce2-03e8-46f8-9bf4-841c33b60056
+id: 33333333-cccc-4444-9999-333333333333
 version: 1.0.0
 description: Detects reading the original file, creating/writing a new file, then deleting the original.
 enabled: true
@@ -21,111 +21,87 @@ references:
 
 condition: >
   sequence
-    maxspan 50ms
+    maxspan 500ms
     by ps.uuid
 
     |(
-       kevt.name = 'CreateFile'
-       and file.operation = 'OPEN'
-       and file.status = 'Success'
-
-       and file.name imatches '?:\\Users\\*'        
-       and not file.name imatches '?:\\Users\\*\\AppData\\*'   
-       and file.extension iin (
-         'txt','doc','docx','xls','xlsx','ppt','pptx',
-         'pdf','png','jpg','jpeg','gif','wav','mp4','csv','zip'
-       )
-
-       and not ps.name in (
-         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
-         'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
-         'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
-         'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
-       )
-       and not ps.exe imatches '?:\\Windows\\*'
-       and not ps.exe imatches '?:\\Program Files*'
-       and not ps.exe imatches '?:\\ProgramData\\*'
-     )|
+      kevt.name = 'CreateFile'
+      and file.operation = 'OPEN'
+      and file.status = 'Success'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not ps.name in (
+        'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+        'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
+        'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
+        'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
+      )
+      and not ps.exe imatches '?:\\Windows\\*'
+      and not ps.exe imatches '?:\\Program Files*'
+      and not ps.exe imatches '?:\\ProgramData\\*'
+    )|
 
     |(
-       kevt.name = 'ReadFile'
-       and file.name imatches '?:\\Users\\*'
-       and not file.name imatches '?:\\Users\\*\\AppData\\*'
-       and file.extension iin (
-         'txt','doc','docx','xls','xlsx','ppt','pptx',
-         'pdf','png','jpg','jpeg','gif','wav','mp4','csv','zip'
-       )
-       and not ps.name in (
-         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
-         'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
-         'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
-         'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
-       )
-       and not ps.exe imatches '?:\\Windows\\*'
-       and not ps.exe imatches '?:\\Program Files*'
-       and not ps.exe imatches '?:\\ProgramData\\*'
-     )|
+      kevt.name = 'ReadFile'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not ps.name in (
+        'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+        'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
+        'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
+        'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
+      )
+      and not ps.exe imatches '?:\\Windows\\*'
+      and not ps.exe imatches '?:\\Program Files*'
+      and not ps.exe imatches '?:\\ProgramData\\*'
+    )|
 
     |(
-       kevt.name = 'CreateFile'
-       and file.operation = 'OPEN'
-       and file.status = 'Success'
-
-       and file.name imatches '?:\\Users\\*'        
-       and not file.name imatches '?:\\Users\\*\\AppData\\*'   
-       and file.extension iin (
-         'txt','doc','docx','xls','xlsx','ppt','pptx',
-         'pdf','png','jpg','jpeg','gif','wav','mp4','csv','zip'
-       )
-
-       and not ps.name in (
-         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
-         'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
-         'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
-         'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
-       )
-       and not ps.exe imatches '?:\\Windows\\*'
-       and not ps.exe imatches '?:\\Program Files*'
-       and not ps.exe imatches '?:\\ProgramData\\*'
-     )|
+      kevt.name = 'CreateFile'
+      and file.operation = 'OPEN'
+      and file.status = 'Success'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not ps.name in (
+        'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+        'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
+        'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
+        'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
+      )
+      and not ps.exe imatches '?:\\Windows\\*'
+      and not ps.exe imatches '?:\\Program Files*'
+      and not ps.exe imatches '?:\\ProgramData\\*'
+    )|
 
     |(
-       kevt.name = 'WriteFile'
-       and file.name imatches '?:\\Users\\*'
-       and not file.name imatches '?:\\Users\\*\\AppData\\*'
-       and file.extension iin (
-         'txt','doc','docx','xls','xlsx','ppt','pptx',
-         'pdf','png','jpg','jpeg','gif','wav','mp4','csv','zip'
-       )
-       and not ps.name in (
-         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
-         'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
-         'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
-         'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
-       )
-       and not ps.exe imatches '?:\\Windows\\*'
-       and not ps.exe imatches '?:\\Program Files*'
-       and not ps.exe imatches '?:\\ProgramData\\*'
-     )|
+      kevt.name = 'WriteFile'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not ps.name in (
+        'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+        'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
+        'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
+        'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
+      )
+      and not ps.exe imatches '?:\\Windows\\*'
+      and not ps.exe imatches '?:\\Program Files*'
+      and not ps.exe imatches '?:\\ProgramData\\*'
+    )|
 
     |(
-       kevt.name = 'DeleteFile'
-       and file.name imatches '?:\\Users\\*'
-       and not file.name imatches '?:\\Users\\*\\AppData\\*'
-       and file.extension iin (
-         'txt','doc','docx','xls','xlsx','ppt','pptx',
-         'pdf','png','jpg','jpeg','gif','wav','mp4','csv','zip'
-       )
-       and not ps.name in (
-         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
-         'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
-         'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
-         'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
-       )
-       and not ps.exe imatches '?:\\Windows\\*'
-       and not ps.exe imatches '?:\\Program Files*'
-       and not ps.exe imatches '?:\\ProgramData\\*'
-     )|
+      kevt.name = 'DeleteFile'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not ps.name in (
+        'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+        'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
+        'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
+        'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
+      )
+      and not ps.exe imatches '?:\\Windows\\*'
+      and not ps.exe imatches '?:\\Program Files*'
+      and not ps.exe imatches '?:\\ProgramData\\*'
+    )|
 
 output: |
   File-to-file with delete by %ps.name. Original read, new created, then original deleted.
@@ -137,4 +113,7 @@ action:
 min-engine-version: 2.0.0
 
 notes: |
-  Uses an OR expression in parentheses for the final step. Adjust exclusions as needed.
+  1) Removed file extension filter so .wncry (or any extension) is caught.
+  2) Increase maxspan to 500ms to reduce misses. 
+  3) If WannaCry writes outside C:\Users, remove or broaden path restrictions.
+  4) If you get false positives, reintroduce the extension filter or shorten maxspan.
