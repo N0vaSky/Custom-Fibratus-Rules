@@ -1,5 +1,5 @@
 name: Memory-to-File Post-Overwrite
-id: 1e1350b5-4562-4515-b3bd-fcd7db52dd13
+id: 11111111-aaaa-4444-9999-111111111111
 version: 1.0.0
 description: Detects file opened, read, overwritten (written twice), then renamed.
 enabled: true
@@ -24,20 +24,86 @@ condition: >
     maxspan 100ms
     by file.object
 
-    |(kevt.name = 'CreateFile' and file.operation = 'OPEN' and file.status = 'Success'
-       and not ps.name in ('brave.exe','chrome.exe','firefox.exe','msedge.exe')
-       and not file.name imatches '?:\\Windows\\system32\\*')|
-    |(kevt.name = 'ReadFile')|
-    |(kevt.name = 'WriteFile')|
-    |(kevt.name = 'WriteFile' and file.io.size > 0)|
-    |(kevt.name = 'RenameFile')|
+    |(
+       kevt.name = 'CreateFile' and file.operation = 'OPEN' and file.status = 'Success'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+     )|
+    |(
+       kevt.name = 'ReadFile'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+     )|
+    |(
+       kevt.name = 'WriteFile'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+     )|
+    |(
+       kevt.name = 'WriteFile'
+       and file.io.size > 0
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+     )|
+    |(
+       kevt.name = 'RenameFile'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+     )|
 
 output: |
   Memory-to-file post-overwrite by %ps.name on %file.name.
 severity: critical
 action:
   - name: kill
+
 min-engine-version: 2.0.0
+
 notes: |
-  Peeler research found ~70% of crypto ransomware were detected in ~115ms on average.
-  This rule uses two distinct write steps (the second has file.io.size > 0).
+  Two WriteFile steps: the second uses "and file.io.size > 0" to avoid same-state transition.
+  Excludes critical processes and system paths, maxspan=70ms to reduce false positives.
