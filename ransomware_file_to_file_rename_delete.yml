@@ -1,7 +1,7 @@
-name: File-to-File with Delete
-id: 33333333-cccc-4444-9999-333333333333
+name: File-to-File with Rename and Delete
+id: 44444444-dddd-4444-9999-444444444444
 version: 1.0.0
-description: Detects reading the original file, creating/writing a new file, then deleting the original.
+description: Detects open of original, creation/write of new file, rename new file, then delete original.
 enabled: true
 
 labels:
@@ -28,20 +28,6 @@ condition: >
        kevt.name = 'CreateFile'
        and file.operation = 'OPEN'
        and file.status = 'Success'
-       and not ps.name in (
-         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
-         'svchost.exe','services.exe','lsass.exe','wininit.exe',
-         'csrss.exe','smss.exe','explorer.exe',
-         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
-       )
-       and not ps.exe imatches '?:\\Windows\\*'
-       and not ps.exe imatches '?:\\Program Files*'
-       and not file.name imatches '?:\\Windows\\*'
-       and not file.name imatches '?:\\Program Files*'
-       and not file.name imatches '?:\\ProgramData\\*'
-     )|
-    |(
-       kevt.name = 'ReadFile'
        and not ps.name in (
          'brave.exe','chrome.exe','firefox.exe','msedge.exe',
          'svchost.exe','services.exe','lsass.exe','wininit.exe',
@@ -85,6 +71,20 @@ condition: >
        and not file.name imatches '?:\\ProgramData\\*'
      )|
     |(
+       kevt.name = 'RenameFile'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+     )|
+    |(
        kevt.name = 'DeleteFile'
        and not ps.name in (
          'brave.exe','chrome.exe','firefox.exe','msedge.exe',
@@ -100,4 +100,13 @@ condition: >
      )|
 
 output: |
-  File-to-file with delete
+  File-to-file with rename and delete by %ps.name
+severity: critical
+action:
+  - name: kill
+
+min-engine-version: 2.0.0
+
+notes: |
+  This version omits an explicit "ReadFile" step to keep total steps ≤ 5.
+  WannaCry-like pattern: open old, create/write new, rename new, delete old.
