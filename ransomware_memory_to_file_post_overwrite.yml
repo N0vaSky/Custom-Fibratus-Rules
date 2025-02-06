@@ -1,0 +1,43 @@
+name: Memory-to-File Post-Overwrite
+id: 1e1350b5-4562-4515-b3bd-fcd7db52dd13
+version: 1.0.0
+description: Detects file opened, read, overwritten (written twice), then renamed.
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - file-encryption
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence
+    maxspan 300ms
+    by file.object
+
+    |(kevt.name = 'CreateFile' and file.operation = 'OPEN' and file.status = 'Success'
+       and not ps.name in ('brave.exe','chrome.exe','firefox.exe','msedge.exe')
+       and not file.name imatches '?:\\Windows\\system32\\*')|
+    |(kevt.name = 'ReadFile')|
+    |(kevt.name = 'WriteFile')|
+    |(kevt.name = 'WriteFile' and file.io.size > 0)|
+    |(kevt.name = 'RenameFile')|
+
+output: |
+  Memory-to-file post-overwrite by %ps.name on %file.name.
+severity: critical
+action:
+  - name: kill
+min-engine-version: 2.0.0
+notes: |
+  Peeler research found ~70% of crypto ransomware were detected in ~115ms on average.
+  This rule uses two distinct write steps (the second has file.io.size > 0).

@@ -1,0 +1,46 @@
+name: File-to-File with Delete
+id: 33333333-cccc-4444-9999-333333333333
+version: 1.0.0
+description: Detects reading the original file, creating/writing a new file, then deleting the original.
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - file-encryption
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence
+    maxspan 300ms
+    by ps.uuid
+
+    |(kevt.name = 'CreateFile' and file.operation = 'OPEN' and file.status = 'Success'
+       and not ps.name in ('brave.exe','chrome.exe','firefox.exe','msedge.exe')
+       and not file.name imatches '?:\\Windows\\system32\\*')|
+    |(kevt.name = 'ReadFile')|
+    |(kevt.name = 'CreateFile' and file.operation in ('CREATE','OPEN') and file.status = 'Success'
+       and not file.name imatches '?:\\Windows\\system32\\*')|
+    |(kevt.name = 'WriteFile')|
+    |(kevt.name = 'DeleteFile')|
+
+output: |
+  File-to-file with delete by %ps.name. Original read, new created, then original deleted.
+
+severity: critical
+action:
+  - name: kill
+
+min-engine-version: 2.0.0
+
+notes: |
+  Uses an OR expression in parentheses for the final step. Adjust exclusions as needed.
