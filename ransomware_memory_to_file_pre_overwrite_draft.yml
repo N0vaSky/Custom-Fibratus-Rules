@@ -1,0 +1,76 @@
+name: Memory-to-File Pre-Overwrite
+id: a72a98a9-d230-41e7-af68-c3e5105f3a2e
+version: 1.0.0
+description: Detects a file opened, then renamed, then overwritten.
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - file-encryption
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence
+    maxspan 500ms
+    by file.object
+
+    |(
+      kevt.name = 'CreateFile'
+      and file.operation = 'OPEN'
+      and file.status = 'Success'
+
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+
+      and not (
+        ps.name in (
+          'OneDrive.exe',
+          'Dropbox.exe',
+          'BackupService.exe',
+          'GoogleDriveFS.exe',
+          'BoxSync.exe',
+          'SafeBackup.exe',
+          'explorer.exe'
+        )
+      )
+    )|
+
+    |(
+      kevt.name = 'RenameFile'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+    )|
+
+    |(
+      kevt.name = 'WriteFile'
+      and file.io.size > 0
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+    )|
+
+output: |
+  Memory-to-file pre-overwrite by %ps.name on %file.name.
+
+severity: critical
+action:
+  - name: kill
+min-engine-version: 2.0.0
