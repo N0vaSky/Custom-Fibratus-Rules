@@ -42,7 +42,8 @@ condition: >
           'BackupService.exe',
           'GoogleDriveFS.exe',
           'BoxSync.exe',
-          'SafeBackup.exe'
+          'SafeBackup.exe',
+          'explorer.exe'
         )
       )
     )|
