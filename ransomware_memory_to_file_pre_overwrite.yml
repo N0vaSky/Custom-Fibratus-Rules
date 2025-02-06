@@ -21,7 +21,7 @@ references:
 
 condition: >
   sequence
-    maxspan 100ms
+    maxspan 70ms
     by file.object
 
     |(kevt.name = 'CreateFile' and file.operation = 'OPEN' and file.status = 'Success'
