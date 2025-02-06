@@ -24,17 +24,60 @@ condition: >
     maxspan 70ms
     by file.object
 
-    |(kevt.name = 'CreateFile' and file.operation = 'OPEN' and file.status = 'Success'
-       and not ps.name in ('brave.exe','chrome.exe','firefox.exe','msedge.exe')
-       and not file.name imatches '?:\\Windows\\system32\\*')|
-    |(kevt.name = 'RenameFile')|
-    |(kevt.name = 'WriteFile')|
+    |(kevt.name = 'CreateFile'
+       and file.operation = 'OPEN'
+       and file.status = 'Success'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+    )|
+    |(kevt.name = 'RenameFile'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+    )|
+    |(kevt.name = 'WriteFile'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+    )|
 
 output: |
   Memory-to-file pre-overwrite by %ps.name on %file.name.
 severity: critical
+
 action:
   - name: kill
+
 min-engine-version: 2.0.0
+
 notes: |
-  Locky ransomware variants often rename first, then overwrite the file.
+  1) Blocks Locky-type pre-overwrite patterns but excludes core system binaries
+     and paths to avoid killing critical processes.
+  2) Replicate these exclusions in the other 3 ransomware rules for consistency.
+  3) Tweak or remove 'RuntimeBroker.exe', 'SearchProtocolHost.exe', etc. as needed.
+  4) Adjust maxspan if you miss slower encryption attempts or still get false positives.
