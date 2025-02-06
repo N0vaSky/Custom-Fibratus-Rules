@@ -21,21 +21,86 @@ references:
 
 condition: >
   sequence
-    maxspan 300ms
+    maxspan 70ms
     by ps.uuid
 
-    |(kevt.name = 'CreateFile' and file.operation = 'OPEN' and file.status = 'Success'
-       and not ps.name in ('brave.exe','chrome.exe','firefox.exe','msedge.exe')
-       and not file.name imatches '?:\\Windows\\system32\\*')|
-    |(kevt.name = 'ReadFile')|
-    |(kevt.name = 'CreateFile' and file.operation in ('CREATE','OPEN') and file.status = 'Success'
-       and not file.name imatches '?:\\Windows\\system32\\*')|
-    |(kevt.name = 'WriteFile')|
-    |(kevt.name = 'DeleteFile')|
+    |(
+       kevt.name = 'CreateFile'
+       and file.operation = 'OPEN'
+       and file.status = 'Success'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+     )|
+    |(
+       kevt.name = 'ReadFile'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+     )|
+    |(
+       kevt.name = 'CreateFile'
+       and file.operation in ('CREATE','OPEN')
+       and file.status = 'Success'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+     )|
+    |(
+       kevt.name = 'WriteFile'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+     )|
+    |(
+       kevt.name = 'DeleteFile'
+       and not ps.name in (
+         'brave.exe','chrome.exe','firefox.exe','msedge.exe',
+         'svchost.exe','services.exe','lsass.exe','wininit.exe',
+         'csrss.exe','smss.exe','explorer.exe',
+         'SearchProtocolHost.exe','SearchFilterHost.exe','RuntimeBroker.exe'
+       )
+       and not ps.exe imatches '?:\\Windows\\*'
+       and not ps.exe imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\Windows\\*'
+       and not file.name imatches '?:\\Program Files*'
+       and not file.name imatches '?:\\ProgramData\\*'
+     )|
 
 output: |
-  File-to-file with delete by %ps.name. Original read, new created, then original deleted.
-
+  File-to-file with delete by %ps.name
 severity: critical
 action:
   - name: kill
@@ -43,4 +108,5 @@ action:
 min-engine-version: 2.0.0
 
 notes: |
-  Uses an OR expression in parentheses for the final step. Adjust exclusions as needed.
+  InfinityCrypt/Dharma-like pattern. "by ps.uuid" because multiple file.objects are involved.
+  Short maxspan means we catch rapid read→write→delete sequences.
