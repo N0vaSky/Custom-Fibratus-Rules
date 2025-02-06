@@ -1,7 +1,7 @@
 name: File-to-File with Delete
 id: 33333333-cccc-4444-9999-333333333333
 version: 1.0.0
-description: Detects reading the original file, creating/writing a new file, then deleting the original.
+description: Detects reading an original file, creating/writing a new file, then deleting the original.
 enabled: true
 
 labels:
@@ -28,32 +28,32 @@ condition: >
       kevt.name = 'CreateFile'
       and file.operation = 'OPEN'
       and file.status = 'Success'
+
       and file.name imatches '?:\\Users\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not ps.name in (
-        'brave.exe','chrome.exe','firefox.exe','msedge.exe',
-        'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
-        'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
-        'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+
+      and not (
+        ps.name in (
+          'OneDrive.exe',
+          'Dropbox.exe',
+          'BackupService.exe',
+          'GoogleDriveFS.exe',
+          'BoxSync.exe',
+          'SafeBackup.exe'
+        )
       )
-      and not ps.exe imatches '?:\\Windows\\*'
-      and not ps.exe imatches '?:\\Program Files*'
-      and not ps.exe imatches '?:\\ProgramData\\*'
     )|
 
     |(
       kevt.name = 'ReadFile'
       and file.name imatches '?:\\Users\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not ps.name in (
-        'brave.exe','chrome.exe','firefox.exe','msedge.exe',
-        'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
-        'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
-        'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
-      )
-      and not ps.exe imatches '?:\\Windows\\*'
-      and not ps.exe imatches '?:\\Program Files*'
-      and not ps.exe imatches '?:\\ProgramData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
     )|
 
     |(
@@ -62,45 +62,27 @@ condition: >
       and file.status = 'Success'
       and file.name imatches '?:\\Users\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not ps.name in (
-        'brave.exe','chrome.exe','firefox.exe','msedge.exe',
-        'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
-        'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
-        'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
-      )
-      and not ps.exe imatches '?:\\Windows\\*'
-      and not ps.exe imatches '?:\\Program Files*'
-      and not ps.exe imatches '?:\\ProgramData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
     )|
 
     |(
       kevt.name = 'WriteFile'
       and file.name imatches '?:\\Users\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not ps.name in (
-        'brave.exe','chrome.exe','firefox.exe','msedge.exe',
-        'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
-        'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
-        'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
-      )
-      and not ps.exe imatches '?:\\Windows\\*'
-      and not ps.exe imatches '?:\\Program Files*'
-      and not ps.exe imatches '?:\\ProgramData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
     )|
 
     |(
       kevt.name = 'DeleteFile'
       and file.name imatches '?:\\Users\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not ps.name in (
-        'brave.exe','chrome.exe','firefox.exe','msedge.exe',
-        'svchost.exe','services.exe','lsass.exe','wininit.exe','csrss.exe',
-        'smss.exe','explorer.exe','SearchProtocolHost.exe','SearchFilterHost.exe',
-        'RuntimeBroker.exe','SearchApp.exe','wazuh.exe','wazuh-agent.exe','taskhostw.exe'
-      )
-      and not ps.exe imatches '?:\\Windows\\*'
-      and not ps.exe imatches '?:\\Program Files*'
-      and not ps.exe imatches '?:\\ProgramData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
     )|
 
 output: |
@@ -112,8 +94,3 @@ action:
 
 min-engine-version: 2.0.0
 
-notes: |
-  1) Removed file extension filter so .wncry (or any extension) is caught.
-  2) Increase maxspan to 500ms to reduce misses. 
-  3) If WannaCry writes outside C:\Users, remove or broaden path restrictions.
-  4) If you get false positives, reintroduce the extension filter or shorten maxspan.
