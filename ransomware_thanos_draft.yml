@@ -1,10 +1,10 @@
-name: Batch File Encryption and Deletion Pattern
-id: 77777777-aaaa-4444-bbbb-777777777777
+name: Thanos Ransomware Early Stage Detection
+id: e8b72f3a-9c21-4f85-b7a3-2f1a8c9b2e89
 version: 1.0.0
 description: |
-  Detects rapid sequence of file operations indicating batch encryption:
-  reading original files, creating new files, and deleting originals 
-  across multiple file types in quick succession.
+  Detects early-stage Thanos ransomware behavior through its distinctive pattern of 
+  file mapping operations and rapid sequence of memory view operations. This rule focuses
+  on the initial reconnaissance and loading phase before encryption begins.
 
 enabled: true
 
@@ -18,69 +18,49 @@ labels:
 
 tags:
   - ransomware
-  - file-encryption
-  - batch-encryption
+  - thanos
+  - file-mapping
+  - memory-operations
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 500ms
+    maxspan 100ms
     by ps.uuid
-
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.protection = 'READONLY'
+      and file.view.type = 'PAGEFILE'
+    )|
+    |(
+      kevt.name = 'UnmapViewFile'
+      and file.view.protection = 'READONLY'
+      and file.view.type = 'PAGEFILE'
+    )|
     |(
       kevt.name = 'CreateFile'
       and file.operation = 'OPEN'
       and file.status = 'Success'
-
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
-
-      and not (
-        ps.name in (
-          'OneDrive.exe',
-          'Dropbox.exe',
-          'BackupService.exe',
-          'GoogleDriveFS.exe',
-          'BoxSync.exe',
-          'SafeBackup.exe',
-          'explorer.exe'
-        )
-      )
+      and file.type = 'File'
+      and file.share.mask = 'READ|DELETE'
     )|
-
     |(
       kevt.name = 'MapViewFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and file.view.protection = 'EXECUTE_READWRITE|READONLY'
+      and file.view.type = 'IMAGE'
     )|
-
-    |(
-      kevt.name = 'MapViewFile'
-      and file.name imatches '?:\\Windows\\System32\\kernel32.dll'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
-    )|
-
-    |(
-      kevt.name = 'CreateFile'
-      and file.name imatches '?:\\Windows\\System32\\apphelp.dll'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
-    )|
-
 
 output: |
-  Batch encryption pattern detected: %ps.name performing rapid open/read → create → write → delete operations.
+  Potential Thanos ransomware early-stage activity detected:
+  Process: %ps.name (PID: %ps.pid)
+  Command Line: %ps.cmdline
+  Sequence of suspicious memory mapping operations detected
+  Parent Process: %ps.parent.name (PPID: %ps.ppid)
 
 severity: critical
+
 action:
   - name: kill
 
