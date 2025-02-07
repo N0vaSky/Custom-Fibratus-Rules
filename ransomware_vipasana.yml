@@ -1,84 +1,67 @@
-name: Vipasana Ransomware Initial File I/O Pattern  
-id: 53e1c1b5-91a3-4257-b1da-ff2836013f65
-version: 1.0.0
+name: Vipasana Ransomware Initial File I/O Pattern
+id: 8e7d9c2a-5f1b-4c3d-b8e1-6a8f37d49b5c
+version: 1.0.2
 description: |
-  Detects Vipasana ransomware through its distinctive pattern of file operations 
-  during initial startup, before encryption begins. Excludes known system processes.
+  Detects Vipasana ransomware through its distinctive sequence of file operations
+  during initial startup, optimized for rapid detection within 50ms.
 
 enabled: true
 
 labels:
-  tactic.id: TA0040 
+  tactic.id: TA0040
   tactic.name: Impact
   tactic.ref: https://attack.mitre.org/tactics/TA0040/
   technique.id: T1486
-  technique.name: Data Encrypted for Impact
+  technique.name: Data Encrypted for Impact 
   technique.ref: https://attack.mitre.org/techniques/T1486/
 
 tags:
-  - ransomware 
+  - ransomware
   - vipasana
-  - early-detection
-  - file-io-patterns
+  - early-detection 
+  - file-io-sequence
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
-  sequence 
+  sequence
     maxspan 50ms
     by ps.uuid
     |(
-      kevt.name = 'MapViewFile'
+      kevt.name = 'MapViewFile'  
       and file.view.type = 'PAGEFILE'
-      and not (
-        ps.name in (
-          'svchost.exe',    
-          'services.exe',
-          'lsass.exe', 
-          'csrss.exe',
-          'smss.exe',
-          'wininit.exe',
-          'winlogon.exe', 
-          'explorer.exe',
-          'System',
-          'MsMpEng.exe'
-        ) 
-      )
-      and not ps.exe imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\explorer.exe',  
-        '?:\\Program Files\\Windows Defender\\*'
-      )
+      and file.view.size = 16384
     )|
     |(
       kevt.name = 'CreateFile'
-      and file.operation in ('CREATE','OPEN')  
-      and file.status = 'Success'
-      and file.name imatches '?:\\Windows\\*'
+      and file.name imatches 'C:\\Windows' 
+      and kevt.arg[type] = 'Directory'
+    )|  
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'IMAGE' 
+      and file.name imatches 'C:\\Windows\\System32\\wow64*.dll'
     )|
     |(  
-      kevt.name = 'MapViewFile'
+      kevt.name = 'CreateFile'
+      and file.name imatches 'C:\\Users\\*\\Desktop\\' 
+      and kevt.arg[type] = 'Directory'
+    )|
+    |(
+      kevt.name = 'MapViewFile'  
       and file.view.type = 'IMAGE'
-    )|
-    |(
-      kevt.name = 'CreateFile'  
-      and file.operation = 'OPEN'
-      and file.name imatches 'C:\\Users\\WDAGUtilityAccount\\Desktop\\*'  
-    )|
-    |(
-      kevt.name = 'EnumDirectory' 
-      and file.name imatches 'C:\\Users\\WDAGUtilityAccount\\Desktop'
+      and file.name imatches 'C:\\Windows\\SysWOW64\\*.dll'  
     )|
 
-output: |  
-  Potential Vipasana ransomware startup pattern detected:
-  Process: %ps.name (PID: %ps.pid) 
-  Command Line: %ps.cmdline
-  Parent Process: %ps.parent.name (PPID: %ps.ppid)
-  Executable Path: %ps.exe
-  
-severity: critical
+output: |
+  Vipasana ransomware startup pattern detected:
+  Process: %ps.name (PID %ps.pid) 
+  Image Path: %ps.exe
+  Parent Process: %ps.parent.name (PPID %ps.ppid)
+  Suspect File I/O: %kevt.name on %file.name
+
+severity: critical  
 
 action:
   - name: kill
