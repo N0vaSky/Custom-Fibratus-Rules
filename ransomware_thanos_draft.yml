@@ -1,11 +1,13 @@
-name: Thanos File I/O Pattern (Consolidated)
-id: d12a34b5-e5f6-7890-ab12-cd34ef56ab7b
+name: Thanos Aggressive File I/O Pattern (Revised)
+id: a1b2c3d4-e5f6-7890-ab12-cd34ef56ab7d
 version: 1.0.0
 description: >
-  Detects Thanos ransomware activity based on a characteristic file I/O pattern. The sequence is defined by a process (grouped by ps.uuid)
-  that first enumerates a common user directory (Desktop, Pictures, Videos, or Documents), then issues a CreateFile event using a SUPERSEDE
-  disposition with create_options containing NON_DIRECTORY_FILE and OPEN_REPARSE_POINT that fails with "The process cannot access",
-  and finally re-enumerates a generic user subdirectory.
+  Detects Thanos ransomware activity by identifying a process (grouped by ps.uuid) that
+  first enumerates a common user directory (Desktop, Pictures, Videos, or Documents),
+  then issues two CreateFile events in quick succession using a SUPERSEDE disposition with
+  create_options including NON_DIRECTORY_FILE and OPEN_REPARSE_POINT that fail with
+  "The process cannot access." The second CreateFile event includes an extra condition on the IRP field
+  to prevent duplicate expression definitions.
 enabled: true
 
 labels:
@@ -26,7 +28,7 @@ references:
 
 condition: >
   sequence
-    maxspan 500ms
+    maxspan 1000ms
     by ps.uuid
 
     |(
@@ -47,12 +49,21 @@ condition: >
       and file.name imatches '?:\\Users\\*\\*'
     )|
     |(
+      kevt.name = 'CreateFile'
+      and kevt.arg[create_disposition] = 'SUPERSEDE'
+      and kevt.arg[create_options] contains 'NON_DIRECTORY_FILE'
+      and kevt.arg[create_options] contains 'OPEN_REPARSE_POINT'
+      and kevt.arg[status] = 'The process cannot access'
+      and file.name imatches '?:\\Users\\*\\*'
+      and kevt.arg[irp] != ''
+    )|
+    |(
       kevt.name = 'EnumDirectory'
       and kevt.arg[directory] imatches '?:\\Users\\*\\*'
     )|
 
 output: |
-  Thanos file I/O pattern detected: process %ps.name exhibited suspicious file operations on %file.name.
+  Thanos aggressive file I/O pattern detected: process %ps.name issued repeated suspicious CreateFile operations on %file.name.
 severity: critical
 action:
   - name: kill
