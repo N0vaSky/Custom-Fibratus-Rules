@@ -1,10 +1,9 @@
-name: WannaCry Ransomware Initial Memory Pattern
+name: WannaCry/Generic Ransomware Initial Pattern
 id: 7f31d8b9-4e2a-4b5d-9c8e-f256871bc432
-version: 1.0.0
+version: 1.1.0
 description: |
-  Detects WannaCry ransomware through its distinctive sequence of memory mappings
-  and file operations during initial startup, before encryption begins.
-  Pattern includes specific PageFile mappings and WOW64 DLL loading sequence.
+  Detects WannaCry and similar ransomware through common initial startup patterns.
+  Based on successful detection patterns from Vipasana rule structure.
 
 enabled: true
 
@@ -32,7 +31,6 @@ condition: >
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
-      and file.view.size = 16384
       and not (
         ps.name in (
           'svchost.exe',
@@ -48,32 +46,32 @@ condition: >
       )
     )|
     |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'PAGEFILE'
-      and file.view.size = 8192
-    )|
-    |(
       kevt.name = 'CreateFile'
       and file.name imatches 'C:\\Windows'
-      and file.type = 'Directory'
-      and file.status = 'Success'
+      and kevt.arg[type] = 'Directory'
     )|
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'IMAGE'
-      and file.name imatches 'C:\\Windows\\System32\\wow64*.dll'
+      and file.name imatches 'C:\\Windows\\System32\\*.dll'
     )|
     |(
-      kevt.name = 'EnumDirectory'
-      and kevt.arg[directory] imatches 'C:\\Windows\\System32'
+      kevt.name = 'CreateFile'
+      and file.name imatches 'C:\\Users\\*\\Desktop\\'
+      and kevt.arg[type] = 'Directory'
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'IMAGE'
+      and file.name imatches 'C:\\Windows\\*\\*.dll'
     )|
 
 output: |
-  WannaCry ransomware startup pattern detected:
-  Process: %ps.name (PID: %ps.pid)
-  Command Line: %ps.cmdline
-  Parent Process: %ps.parent.name (PPID: %ps.ppid)
-  Executable Path: %ps.exe
+  Ransomware startup pattern detected:
+  Process: %ps.name (PID %ps.pid)
+  Image Path: %ps.exe
+  Parent Process: %ps.parent.name (PPID %ps.ppid)
+  Suspect File I/O: %kevt.name on %file.name
 
 severity: critical
 
