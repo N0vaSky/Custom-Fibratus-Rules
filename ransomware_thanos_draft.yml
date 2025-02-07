@@ -4,6 +4,7 @@ version: 1.0.0
 description: |
   Detects Thanos ransomware through its distinctive pattern of repeated self-executable
   mapping and file operations during initial startup, before encryption begins.
+  Excludes known system processes to prevent disruption.
 
 enabled: true
 
@@ -31,6 +32,38 @@ condition: >
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
+      and not (
+        ps.name in (
+          'svchost.exe',
+          'services.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'smss.exe',
+          'wininit.exe',
+          'winlogon.exe',
+          'explorer.exe',
+          'System',
+          'MsMpEng.exe',
+          'TrustedInstaller.exe',
+          'RuntimeBroker.exe',
+          'SearchIndexer.exe',
+          'spoolsv.exe'
+        )
+      )
+      and not ps.exe imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\explorer.exe',
+        '?:\\Program Files\\Windows Defender\\*'
+      )
+      and not (
+        ps.parent.name in (
+          'services.exe',
+          'wininit.exe',
+          'lsass.exe',
+          'winlogon.exe',
+          'System'
+        )
+      )
     )|
     |(
       kevt.name = 'CreateFile'
@@ -58,7 +91,7 @@ output: |
   Process: %ps.name (PID: %ps.pid)
   Command Line: %ps.cmdline
   Parent Process: %ps.parent.name (PPID: %ps.ppid)
-  - Observed repeated self-executable mapping pattern
+  Executable Path: %ps.exe
 
 severity: critical
 
