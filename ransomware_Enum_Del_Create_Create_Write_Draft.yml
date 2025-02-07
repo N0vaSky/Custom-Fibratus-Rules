@@ -9,7 +9,7 @@ enabled: true
 
 condition: >
   sequence
-    maxspan 100ms
+    maxspan 10ms
     by ps.uuid
     |(
       (
