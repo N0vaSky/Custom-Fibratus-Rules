@@ -1,0 +1,57 @@
+name: Thanos File I/O Pattern
+id: a1b2c3d4-e5f6-7890-ab12-cd34ef56ab78
+version: 1.0.0
+description: >
+  Detects Thanos ransomware activity by identifying a sequence of file I/O operations where a process
+  (grouped by ps.uuid) enumerates a user data directory and then issues repeated CreateFile operations
+  with a SUPERSEDE disposition and the NON_DIRECTORY_FILE|OPEN_REPARSE_POINT options that fail with
+  "The process cannot access." This behavior is indicative of Thanos attempting to modify (encrypt)
+  files based on a characteristic file I/O pattern.
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - file-encryption
+  - thanos
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence
+    maxspan 500ms
+    by ps.uuid
+
+    |(
+      kevt.name = 'EnumDirectory'
+      and directory imatches '?:\\Users\\*\\(Pictures|Videos|Documents|Desktop)\\.*'
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and file.operation = 'SUPERSEDE'
+      and create_options contains 'NON_DIRECTORY_FILE'
+      and create_options contains 'OPEN_REPARSE_POINT'
+      and status = 'The process cannot access'
+      and file.name imatches '?:\\Users\\*\\(Pictures|Videos|Documents|Desktop)\\.*'
+    )|
+    |(
+      kevt.name = 'EnumDirectory'
+      and directory imatches '?:\\Users\\*\\(Pictures|Videos|Documents|Desktop)\\.*'
+    )|
+
+output: |
+  Thanos file I/O pattern detected by %ps.name on %file.name in directory %directory.
+
+severity: critical
+action:
+  - name: kill
+
+min-engine-version: 2.0.0
