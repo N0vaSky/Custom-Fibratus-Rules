@@ -1,0 +1,86 @@
+name: Vipasana Ransomware Initial File I/O Pattern  
+id: 53e1c1b5-91a3-4257-b1da-ff2836013f65
+version: 1.0.0
+description: |
+  Detects Vipasana ransomware through its distinctive pattern of file operations 
+  during initial startup, before encryption begins. Excludes known system processes.
+
+enabled: true
+
+labels:
+  tactic.id: TA0040 
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware 
+  - vipasana
+  - early-detection
+  - file-io-patterns
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence 
+    maxspan 50ms
+    by ps.uuid
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and not (
+        ps.name in (
+          'svchost.exe',    
+          'services.exe',
+          'lsass.exe', 
+          'csrss.exe',
+          'smss.exe',
+          'wininit.exe',
+          'winlogon.exe', 
+          'explorer.exe',
+          'System',
+          'MsMpEng.exe'
+        ) 
+      )
+      and not ps.exe imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\explorer.exe',  
+        '?:\\Program Files\\Windows Defender\\*'
+      )
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and file.operation in ('CREATE','OPEN')  
+      and file.status = 'Success'
+      and file.name imatches '?:\\Windows\\*'
+    )|
+    |(  
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'IMAGE'
+    )|
+    |(
+      kevt.name = 'CreateFile'  
+      and file.operation = 'OPEN'
+      and file.name imatches 'C:\\Users\\WDAGUtilityAccount\\Desktop\\*'  
+    )|
+    |(
+      kevt.name = 'EnumDirectory' 
+      and file.name imatches 'C:\\Users\\WDAGUtilityAccount\\Desktop'
+    )|
+
+output: |  
+  Potential Vipasana ransomware startup pattern detected:
+  Process: %ps.name (PID: %ps.pid) 
+  Command Line: %ps.cmdline
+  Parent Process: %ps.parent.name (PPID: %ps.ppid)
+  Executable Path: %ps.exe
+  
+severity: critical
+
+action:
+  - name: kill
+
+min-engine-version: 2.0.0
