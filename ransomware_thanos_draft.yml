@@ -1,11 +1,11 @@
-name: Thanos File I/O Pattern (Adjusted)
-id: d12a34b5-e5f6-7890-ab12-cd34ef56ab79
+name: Thanos File I/O Pattern (Consolidated)
+id: d12a34b5-e5f6-7890-ab12-cd34ef56ab7b
 version: 1.0.0
 description: >
-  Detects Thanos ransomware activity based on a characteristic file I/O pattern. This rule identifies a sequence
-  of events where a process (grouped by ps.uuid) enumerates common user directories (Desktop, Pictures, Videos, Documents)
-  and then attempts to open files using the SUPERSEDE disposition with NON_DIRECTORY_FILE and OPEN_REPARSE_POINT options
-  that fail with "The process cannot access." Such behavior is indicative of Thanos-like activity.
+  Detects Thanos ransomware activity based on a characteristic file I/O pattern. The sequence is defined by a process (grouped by ps.uuid)
+  that first enumerates a common user directory (Desktop, Pictures, Videos, or Documents), then issues a CreateFile event using a SUPERSEDE
+  disposition with create_options containing NON_DIRECTORY_FILE and OPEN_REPARSE_POINT that fails with "The process cannot access",
+  and finally re-enumerates a generic user subdirectory.
 enabled: true
 
 labels:
@@ -31,26 +31,19 @@ condition: >
 
     |(
       kevt.name = 'EnumDirectory'
-      and kevt.arg[directory] imatches '?:\\Users\\*\\Desktop\\*'
-    )|
-    |(
-      kevt.name = 'EnumDirectory'
-      and kevt.arg[directory] imatches '?:\\Users\\*\\Pictures\\*'
-    )|
-    |(
-      kevt.name = 'EnumDirectory'
-      and kevt.arg[directory] imatches '?:\\Users\\*\\Videos\\*'
-    )|
-    |(
-      kevt.name = 'EnumDirectory'
-      and kevt.arg[directory] imatches '?:\\Users\\*\\Documents\\*'
+      and (
+           kevt.arg[directory] imatches '?:\\Users\\*\\Desktop\\*'
+        or kevt.arg[directory] imatches '?:\\Users\\*\\Pictures\\*'
+        or kevt.arg[directory] imatches '?:\\Users\\*\\Videos\\*'
+        or kevt.arg[directory] imatches '?:\\Users\\*\\Documents\\*'
+      )
     )|
     |(
       kevt.name = 'CreateFile'
-      and file.operation = 'SUPERSEDE'
-      and create_options contains 'NON_DIRECTORY_FILE'
-      and create_options contains 'OPEN_REPARSE_POINT'
-      and status = 'The process cannot access'
+      and kevt.arg[create_disposition] = 'SUPERSEDE'
+      and kevt.arg[create_options] contains 'NON_DIRECTORY_FILE'
+      and kevt.arg[create_options] contains 'OPEN_REPARSE_POINT'
+      and kevt.arg[status] = 'The process cannot access'
       and file.name imatches '?:\\Users\\*\\*'
     )|
     |(
@@ -59,8 +52,7 @@ condition: >
     )|
 
 output: |
-  Thanos file I/O pattern detected: process %ps.name exhibited suspicious file access on %file.name.
-
+  Thanos file I/O pattern detected: process %ps.name exhibited suspicious file operations on %file.name.
 severity: critical
 action:
   - name: kill
