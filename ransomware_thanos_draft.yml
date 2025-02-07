@@ -1,10 +1,9 @@
-name: Ransomware Initial Behavior Detection
+name: File Read-Write Pattern with Extensions
 id: 88888888-bbbb-4444-aaaa-888888888888
 version: 1.0.0
 description: |
-  Detects initial ransomware behavior before encryption begins:
-  directory enumeration patterns, file access patterns,
-  and preliminary file operations from suspicious locations.
+  Detects the core pattern of reading from one file and writing to another with a different extension,
+  which is fundamental to any encryption operation.
 
 enabled: true
 
@@ -18,8 +17,7 @@ labels:
 
 tags:
   - ransomware
-  - initial-behavior
-  - directory-enumeration
+  - file-encryption
 
 references:
   - https://attack.mitre.org/techniques/T1486/
@@ -28,15 +26,16 @@ condition: >
   sequence
     maxspan 50ms
     by ps.uuid
-    
+
     |(
       kevt.name = 'CreateFile'
       and file.operation = 'OPEN'
       and file.status = 'Success'
-      and (
-        ps.name imatches '*.exe'
-        and ps.cwd imatches '?:\\Windows\\'
-      )
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
       and not (
         ps.name in (
           'OneDrive.exe',
@@ -49,9 +48,9 @@ condition: >
         )
       )
     )|
-
+    
     |(
-      kevt.name = 'EnumDirectory'
+      kevt.name = 'ReadFile'
       and file.name imatches '?:\\Users\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
       and not file.name imatches '?:\\Windows\\*'
@@ -61,11 +60,25 @@ condition: >
 
     |(
       kevt.name = 'CreateFile'
-      and (
-        file.operation = 'OPEN'
-        or
-        file.operation = 'CREATE'
-      )
+      and file.operation = 'CREATE'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+    )|
+
+    |(
+      kevt.name = 'WriteFile'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+    )|
+
+    |(
+      kevt.name = 'DeleteFile'
       and file.name imatches '?:\\Users\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
       and not file.name imatches '?:\\Windows\\*'
@@ -74,7 +87,7 @@ condition: >
     )|
 
 output: |
-  Potential ransomware detected in early stage: %ps.name from %ps.exe with current directory %ps.cwd performing rapid directory enumeration and file access.
+  Potential file encryption detected: %ps.name performing sequential file operations typical of encryption.
 
 severity: critical
 action:
