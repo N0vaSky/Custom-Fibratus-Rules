@@ -26,7 +26,7 @@ references:
 
 condition: >
   sequence
-    maxspan 5ms
+    maxspan 500ms
     by ps.uuid
 
     |(
@@ -36,7 +36,6 @@ condition: >
 
       and file.name imatches '?:\\Users\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
 
@@ -54,43 +53,29 @@ condition: >
     )|
 
     |(
-      kevt.name = 'ReadFile'
-      and file.io.size >= 268435456
+      kevt.name = 'MapViewFile'
       and file.name imatches '?:\\Users\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+    )|
+
+    |(
+      kevt.name = 'MapViewFile'
+      and file.name imatches '?:\\Windows\\System32\\kernel32.dll'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
     )|
 
     |(
       kevt.name = 'CreateFile'
-      and file.operation = 'CREATE'
-      and file.name imatches '?:\\Users\\*'
+      and file.name imatches '?:\\Windows\\System32\\apphelp.dll'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
     )|
 
-    |(
-      kevt.name = 'WriteFile'
-      and file.io.size >= 2097152
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
-    )|
-
-    |(
-      kevt.name = 'DeleteFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
-    )|
 
 output: |
   Batch encryption pattern detected: %ps.name performing rapid open/read → create → write → delete operations.
