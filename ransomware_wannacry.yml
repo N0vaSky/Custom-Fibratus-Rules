@@ -1,0 +1,83 @@
+name: WannaCry Ransomware Initial Memory Pattern
+id: 7f31d8b9-4e2a-4b5d-9c8e-f256871bc432
+version: 1.0.0
+description: |
+  Detects WannaCry ransomware through its distinctive sequence of memory mappings
+  and file operations during initial startup, before encryption begins.
+  Pattern includes specific PageFile mappings and WOW64 DLL loading sequence.
+
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - wannacry
+  - early-detection
+  - memory-patterns
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence
+    maxspan 50ms
+    by ps.uuid
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and file.view.size = 16384
+      and not (
+        ps.name in (
+          'svchost.exe',
+          'services.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'smss.exe',
+          'wininit.exe',
+          'winlogon.exe',
+          'explorer.exe',
+          'System'
+        )
+      )
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and file.view.size = 8192
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and file.name imatches 'C:\\Windows'
+      and file.type = 'Directory'
+      and file.status = 'Success'
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'IMAGE'
+      and file.name imatches 'C:\\Windows\\System32\\wow64*.dll'
+    )|
+    |(
+      kevt.name = 'EnumDirectory'
+      and kevt.arg[directory] imatches 'C:\\Windows\\System32'
+    )|
+
+output: |
+  WannaCry ransomware startup pattern detected:
+  Process: %ps.name (PID: %ps.pid)
+  Command Line: %ps.cmdline
+  Parent Process: %ps.parent.name (PPID: %ps.ppid)
+  Executable Path: %ps.exe
+
+severity: critical
+
+action:
+  - name: kill
+
+min-engine-version: 2.0.0
