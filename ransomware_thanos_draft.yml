@@ -1,10 +1,10 @@
-name: Batch File Encryption and Deletion Pattern
-id: 77777777-aaaa-4444-bbbb-777777777777
+name: Ransomware Initial Behavior Detection
+id: 88888888-bbbb-4444-aaaa-888888888888
 version: 1.0.0
 description: |
-  Detects rapid sequence of file operations indicating batch encryption:
-  reading original files, creating new files, and deleting originals 
-  across multiple file types in quick succession.
+  Detects initial ransomware behavior before encryption begins:
+  directory enumeration patterns, file access patterns,
+  and preliminary file operations from suspicious locations.
 
 enabled: true
 
@@ -18,28 +18,25 @@ labels:
 
 tags:
   - ransomware
-  - file-encryption
-  - batch-encryption
+  - initial-behavior
+  - directory-enumeration
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 100ms
+    maxspan 50ms
     by ps.uuid
-
+    
     |(
       kevt.name = 'CreateFile'
       and file.operation = 'OPEN'
       and file.status = 'Success'
-
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
-
+      and (
+        ps.name imatches '*.exe'
+        and ps.cwd imatches '?:\\Windows\\'
+      )
       and not (
         ps.name in (
           'OneDrive.exe',
@@ -54,8 +51,7 @@ condition: >
     )|
 
     |(
-      kevt.name = 'ReadFile'
-      and file.io.size >= 268435456
+      kevt.name = 'EnumDirectory'
       and file.name imatches '?:\\Users\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
       and not file.name imatches '?:\\Windows\\*'
@@ -65,26 +61,11 @@ condition: >
 
     |(
       kevt.name = 'CreateFile'
-      and file.operation = 'CREATE'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
-    )|
-
-    |(
-      kevt.name = 'WriteFile'
-      and file.io.size >= 2097152
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
-    )|
-
-    |(
-      kevt.name = 'DeleteFile'
+      and (
+        file.operation = 'OPEN'
+        or
+        file.operation = 'CREATE'
+      )
       and file.name imatches '?:\\Users\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
       and not file.name imatches '?:\\Windows\\*'
@@ -93,7 +74,7 @@ condition: >
     )|
 
 output: |
-  Batch encryption pattern detected: %ps.name performing rapid open/read → create → write → delete operations.
+  Potential ransomware detected in early stage: %ps.name from %ps.exe with current directory %ps.cwd performing rapid directory enumeration and file access.
 
 severity: critical
 action:
