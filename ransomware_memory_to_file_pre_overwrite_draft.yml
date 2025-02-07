@@ -34,7 +34,7 @@ condition: >
       and not file.name imatches '?:\\Windows\\*'
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
-      and not kevt.arg[cmdline] icontains 'C:\\Windows\\Explorer.EXE'
+      and not ps.exe imatches '?:\\Windows\\Explorer.EXE'
 
       and not (
         ps.name iin (
