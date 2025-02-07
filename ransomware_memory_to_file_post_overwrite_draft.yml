@@ -1,7 +1,7 @@
-name: Memory-to-File Post-Overwrite
+name: Memory-to-File Post-Overwrite (Cerber style)
 id: 1e1350b5-4562-4515-b3bd-fcd7db52dd13
 version: 1.0.0
-description: Detects a file opened, read, overwritten (twice), then renamed.
+description: Detects memory-to-file post-overwrite with optional rename/delete/create, typical of Cerber.
 enabled: true
 
 labels:
@@ -15,13 +15,15 @@ labels:
 tags:
   - ransomware
   - file-encryption
+  - cerber
 
 references:
   - https://attack.mitre.org/techniques/T1486/
+  - https://github.com/rabbitstack/fibratus
 
 condition: >
   sequence
-    maxspan 700ms
+    maxspan 1s
     by file.object
 
     |(
@@ -29,8 +31,9 @@ condition: >
       and file.operation = 'OPEN'
       and file.status = 'Success'
 
-      and file.name imatches '?:\\Users\\.*'
+      and file.name imatches '?:\\Users\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\*'
+
       and not file.name imatches '?:\\Windows\\*'
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
@@ -39,15 +42,13 @@ condition: >
         ps.name in (
           'OneDrive.exe',
           'Dropbox.exe',
-          'BackupService.exe',
           'GoogleDriveFS.exe',
           'BoxSync.exe',
-          'SafeBackup.exe',
-          'explorer.exe'
+          'BackupService.exe',
+          'SafeBackup.exe'
         )
       )
     )|
-
     |(
       kevt.name = 'ReadFile'
       and file.name imatches '?:\\Users\\*'
@@ -56,7 +57,6 @@ condition: >
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
     )|
-
     |(
       kevt.name = 'WriteFile'
       and file.name imatches '?:\\Users\\*'
@@ -65,7 +65,6 @@ condition: >
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
     )|
-
     |(
       kevt.name = 'WriteFile'
       and file.io.size > 0
@@ -75,20 +74,26 @@ condition: >
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
     )|
-
     |(
-      kevt.name = 'RenameFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      (
+        kevt.name = 'RenameFile'
+      )
+      or
+      (
+        kevt.name = 'FileDelete'
+      )
+      or
+      (
+        kevt.name = 'FileCreate'
+      )
     )|
 
 output: |
-  Memory-to-file post-overwrite by %ps.name on %file.name.
+  Possible Cerber memory-to-file post-overwrite by %ps.name on %file.name:
+  open/read/write twice, then rename/delete/create.
 
 severity: critical
 action:
   - name: kill
+
 min-engine-version: 2.0.0
