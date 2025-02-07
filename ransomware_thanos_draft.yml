@@ -1,12 +1,11 @@
-name: Thanos File I/O Pattern
-id: a1b2c3d4-e5f6-7890-ab12-cd34ef56ab78
+name: Thanos File I/O Pattern (Adjusted)
+id: d12a34b5-e5f6-7890-ab12-cd34ef56ab79
 version: 1.0.0
 description: >
-  Detects Thanos ransomware activity by identifying a sequence of file I/O operations where a process
-  (grouped by ps.uuid) enumerates a user data directory and then issues repeated CreateFile operations
-  with a SUPERSEDE disposition and the NON_DIRECTORY_FILE|OPEN_REPARSE_POINT options that fail with
-  "The process cannot access." This behavior is indicative of Thanos attempting to modify (encrypt)
-  files based on a characteristic file I/O pattern.
+  Detects Thanos ransomware activity based on a characteristic file I/O pattern. This rule identifies a sequence
+  of events where a process (grouped by ps.uuid) enumerates common user directories (Desktop, Pictures, Videos, Documents)
+  and then attempts to open files using the SUPERSEDE disposition with NON_DIRECTORY_FILE and OPEN_REPARSE_POINT options
+  that fail with "The process cannot access." Such behavior is indicative of Thanos-like activity.
 enabled: true
 
 labels:
@@ -32,7 +31,19 @@ condition: >
 
     |(
       kevt.name = 'EnumDirectory'
-      and directory imatches '?:\\Users\\*\\(Pictures|Videos|Documents|Desktop)\\.*'
+      and kevt.arg[directory] imatches '?:\\Users\\*\\Desktop\\*'
+    )|
+    |(
+      kevt.name = 'EnumDirectory'
+      and kevt.arg[directory] imatches '?:\\Users\\*\\Pictures\\*'
+    )|
+    |(
+      kevt.name = 'EnumDirectory'
+      and kevt.arg[directory] imatches '?:\\Users\\*\\Videos\\*'
+    )|
+    |(
+      kevt.name = 'EnumDirectory'
+      and kevt.arg[directory] imatches '?:\\Users\\*\\Documents\\*'
     )|
     |(
       kevt.name = 'CreateFile'
@@ -40,15 +51,15 @@ condition: >
       and create_options contains 'NON_DIRECTORY_FILE'
       and create_options contains 'OPEN_REPARSE_POINT'
       and status = 'The process cannot access'
-      and file.name imatches '?:\\Users\\*\\(Pictures|Videos|Documents|Desktop)\\.*'
+      and file.name imatches '?:\\Users\\*\\*'
     )|
     |(
       kevt.name = 'EnumDirectory'
-      and directory imatches '?:\\Users\\*\\(Pictures|Videos|Documents|Desktop)\\.*'
+      and kevt.arg[directory] imatches '?:\\Users\\*\\*'
     )|
 
 output: |
-  Thanos file I/O pattern detected by %ps.name on %file.name in directory %directory.
+  Thanos file I/O pattern detected: process %ps.name exhibited suspicious file access on %file.name.
 
 severity: critical
 action:
