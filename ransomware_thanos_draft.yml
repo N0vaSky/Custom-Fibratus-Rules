@@ -1,15 +1,11 @@
-name: Thanos Aggressive Early Detection – Rapid Enum + Suspicious CreateFile (Revised)
-id: 12345678-abcd-90ef-1234-567890abcdef
-version: 1.0.1
-description: >
-  Detects early Thanos ransomware behavior by capturing a rapid sequence of file I/O events (grouped by ps.uuid)
-  that occur before encryption fully takes hold. The sequence is:
-    1. A CreateFile event opening the root (C:\) using an OPEN disposition.
-    2. An EnumDirectory event over a user directory (C:\Users\*), excluding common system subfolders.
-    3. A CreateFile event using a SUPERSEDE disposition with create_options including NON_DIRECTORY_FILE and OPEN_REPARSE_POINT
-       that fails with “The process cannot access” on a file under a user directory.
-    4. A final EnumDirectory event in the user area.
-  All events must occur within 150ms.
+name: Batch File Encryption and Deletion Pattern
+id: 77777777-aaaa-4444-bbbb-777777777777
+version: 1.0.0
+description: |
+  Detects rapid sequence of file operations indicating batch encryption:
+  reading original files, creating new files, and deleting originals 
+  across multiple file types in quick succession.
+
 enabled: true
 
 labels:
@@ -23,45 +19,82 @@ labels:
 tags:
   - ransomware
   - file-encryption
-  - thanos
+  - batch-encryption
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 50ms
+    maxspan 100ms
     by ps.uuid
 
     |(
       kevt.name = 'CreateFile'
-      and kevt.arg[create_disposition] = 'OPEN'
-      and kevt.arg[create_options] contains 'SYNCHRONOUS_IO_NONALERT'
+      and file.operation = 'OPEN'
+      and file.status = 'Success'
+
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+
+      and not (
+        ps.name in (
+          'OneDrive.exe',
+          'Dropbox.exe',
+          'BackupService.exe',
+          'GoogleDriveFS.exe',
+          'BoxSync.exe',
+          'SafeBackup.exe',
+          'explorer.exe'
+        )
+      )
     )|
+
     |(
-      kevt.name = 'EnumDirectory'
-      and file.name imatches 'C:\\Users\\*'
-      and not file.name imatches 'C:\\Users\\*\\AppData\\*'
-      and not file.name imatches 'C:\\Users\\*\\Windows\\*'
-      and not file.name imatches 'C:\\Users\\*\\Program Files\\*'
-      and not file.name imatches 'C:\\Users\\*\\ProgramData\\*'
+      kevt.name = 'ReadFile'
+      and file.io.size >= 268435456
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
     )|
+
     |(
       kevt.name = 'CreateFile'
-      and file.operation in ('CREATE','OPEN')
-      and kevt.arg[create_disposition] = 'SUPERSEDE'
-      and kevt.arg[create_options] contains 'NON_DIRECTORY_FILE'
-      and kevt.arg[create_options] contains 'OPEN_REPARSE_POINT'
-      and kevt.arg[status] = 'The process cannot access'
-      and file.name imatches 'C:\\Users\\*\\*'
+      and file.operation = 'CREATE'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
     )|
+
     |(
-      kevt.name = 'EnumDirectory'
-      and file.name imatches 'C:\\Users\\*'
+      kevt.name = 'WriteFile'
+      and file.io.size >= 2097152
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+    )|
+
+    |(
+      kevt.name = 'DeleteFile'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
     )|
 
 output: |
-  Thanos early detection triggered: process %ps.name (%ps.uuid) is exhibiting rapid file system activity indicative of ransomware behavior.
+  Batch encryption pattern detected: %ps.name performing rapid open/read → create → write → delete operations.
+
 severity: critical
 action:
   - name: kill
