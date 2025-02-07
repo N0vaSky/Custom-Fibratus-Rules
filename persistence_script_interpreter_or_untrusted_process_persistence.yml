@@ -1,45 +1,71 @@
 name: Registry Run Key/Startup Persistence via Script Host or Untrusted Process
 id: cc41ee3a-6e44-4903-85a4-0147ec6a7eea
-version: 1.0.2
+version: 1.1.0
 description: |
   Detects suspicious attempts to establish persistence by modifying Registry Run keys or
-  Startup folder entries. This rule targets events where a script interpreter (or its parent)
-  or an untrusted process creates or modifies these well-known autostart locations,
-  which adversaries often abuse to maintain persistence across reboots.
+  Startup folder entries. This rule focuses on script interpreters or untrusted processes
+  that modify known autostart locations, but excludes legitimate system or Microsoft-signed processes.
 labels:
-  tactic.id: TA0006
+  tactic.id: TA0003
   tactic.name: Persistence
-  tactic.ref: https://attack.mitre.org/tactics/TA0006/
+  tactic.ref: https://attack.mitre.org/tactics/TA0003/
   technique.id: T1547
   technique.name: Boot or Logon Autostart Execution
   technique.ref: https://attack.mitre.org/techniques/T1547/
   subtechnique.id: T1547.001
   subtechnique.name: Registry Run Keys / Startup Folder
   subtechnique.ref: https://attack.mitre.org/techniques/T1547/001/
+
 condition: >
-  (modify_registry or create_file)
-    and
   (
-    ps.name in script_interpreters
-      or
-    ps.parent.name in script_interpreters
-      or
-    pe.is_trusted = false
-  )
-    and
-  (
-    registry.key.name imatches registry_run_keys
-      or
-    file.name imatches startup_locations
-  )
-    and
-    not
-  ps.exe imatches
+    (modify_registry or create_file)
+      and
     (
-      '?:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
-      '?:\\Program Files (x86)\\Microsoft\\Edge\\Application\\*\\msedge.exe',
-      '?:\\Program Files\\Microsoft\\Edge\\Application\\*\\msedge.exe'
+      ps.name in script_interpreters
+      or
+      ps.parent.name in script_interpreters
+      or
+      pe.is_trusted = false
     )
+      and
+    (
+      registry.key.name imatches registry_run_keys
+      or
+      file.name imatches startup_locations
+    )
+  )
+  and
+  not
+  (
+    ps.name in
+      (
+        'explorer.exe',
+        'services.exe',
+        'svchost.exe',
+        'msiexec.exe',
+        'chrome.exe',
+        'firefox.exe',
+        'opera.exe',
+        'msedge.exe',
+        'OneDrive.exe',
+        'GoogleDriveFS.exe',
+        'Dropbox.exe'
+      )
+    or
+    (
+      pe.is_signed = true
+      and pe.company contains 'Microsoft'
+    )
+    or
+    ps.exe imatches
+      (
+        '?:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+        '?:\\Program Files (x86)\\Microsoft\\Edge\\Application\\*\\msedge.exe',
+        '?:\\Program Files\\Microsoft\\Edge\\Application\\*\\msedge.exe'
+      )
+
+  )
+
 action:
   - name: kill
 
