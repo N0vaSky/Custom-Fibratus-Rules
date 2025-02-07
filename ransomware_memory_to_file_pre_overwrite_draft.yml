@@ -21,7 +21,7 @@ references:
 
 condition: >
   sequence
-    maxspan 700ms
+    maxspan 100ms
     by file.object
 
     |(
