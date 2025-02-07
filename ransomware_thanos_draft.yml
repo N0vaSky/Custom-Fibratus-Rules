@@ -1,11 +1,15 @@
-name: Thanos Aggressive Encryption Activity
+name: Thanos Aggressive Early Detection – Rapid Enum + Suspicious CreateFile (Revised)
 id: 12345678-abcd-90ef-1234-567890abcdef
-version: 1.0.0
+version: 1.0.1
 description: >
-  Detects aggressive file encryption activity consistent with Thanos ransomware. This rule fires when a process (grouped by ps.uuid)
-  first issues a CreateFile event with a SUPERSEDE disposition and create_options including NON_DIRECTORY_FILE and OPEN_REPARSE_POINT that fails
-  with "The process cannot access," immediately followed (within 500ms) by a WriteFile event writing data to a file whose name ends with .crypted.
-  Such a rapid sequence indicates an attempted in-place encryption of a user file.
+  Detects early Thanos ransomware behavior by capturing a rapid sequence of file I/O events (grouped by ps.uuid)
+  that occur before encryption fully takes hold. The sequence is:
+    1. A CreateFile event opening the root (C:\) using an OPEN disposition.
+    2. An EnumDirectory event over a user directory (C:\Users\*), excluding common system subfolders.
+    3. A CreateFile event using a SUPERSEDE disposition with create_options including NON_DIRECTORY_FILE and OPEN_REPARSE_POINT
+       that fails with “The process cannot access” on a file under a user directory.
+    4. A final EnumDirectory event in the user area.
+  All events must occur within 150ms.
 enabled: true
 
 labels:
@@ -26,25 +30,38 @@ references:
 
 condition: >
   sequence
-    maxspan 500ms
+    maxspan 50ms
     by ps.uuid
 
     |(
       kevt.name = 'CreateFile'
+      and kevt.arg[create_disposition] = 'OPEN'
+      and kevt.arg[create_options] contains 'SYNCHRONOUS_IO_NONALERT'
+    )|
+    |(
+      kevt.name = 'EnumDirectory'
+      and file.name imatches 'C:\\Users\\*'
+      and not file.name imatches 'C:\\Users\\*\\AppData\\*'
+      and not file.name imatches 'C:\\Users\\*\\Windows\\*'
+      and not file.name imatches 'C:\\Users\\*\\Program Files\\*'
+      and not file.name imatches 'C:\\Users\\*\\ProgramData\\*'
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and file.operation in ('CREATE','OPEN')
       and kevt.arg[create_disposition] = 'SUPERSEDE'
       and kevt.arg[create_options] contains 'NON_DIRECTORY_FILE'
       and kevt.arg[create_options] contains 'OPEN_REPARSE_POINT'
       and kevt.arg[status] = 'The process cannot access'
-      and file.name imatches '?:\\Users\\*\\*'
+      and file.name imatches 'C:\\Users\\*\\*'
     )|
     |(
-      kevt.name = 'WriteFile'
-      and file.name imatches '?:\\Users\\*\\*.crypted'
-      and file.io.size > 0
+      kevt.name = 'EnumDirectory'
+      and file.name imatches 'C:\\Users\\*'
     )|
 
 output: |
-  Thanos aggressive encryption activity detected: process %ps.name attempted to encrypt %file.name.
+  Thanos early detection triggered: process %ps.name (%ps.uuid) is exhibiting rapid file system activity indicative of ransomware behavior.
 severity: critical
 action:
   - name: kill
