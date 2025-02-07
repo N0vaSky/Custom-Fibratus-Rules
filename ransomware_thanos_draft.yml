@@ -1,10 +1,9 @@
-name: Thanos Ransomware Initial Enumeration Detection
-id: e8b72f3a-9c21-4f85-b7a3-2f1a8c9b2e89
+name: Thanos Ransomware Initial Memory Pattern
+id: 01a45edb-78c2-4a39-9d7c-2f19e384517c
 version: 1.0.0
 description: |
-  Detects Thanos ransomware through its distinctive pattern of directory enumeration
-  and file access behavior. The rule looks for rapid enumeration of user directories
-  followed by repeated file access attempts.
+  Detects Thanos ransomware through its distinctive pattern of repeated self-executable
+  mapping and file operations during initial startup, before encryption begins.
 
 enabled: true
 
@@ -19,63 +18,47 @@ labels:
 tags:
   - ransomware
   - thanos
-  - directory-enumeration
+  - early-detection
+  - memory-patterns
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 100ms
+    maxspan 50ms
     by ps.uuid
     |(
-      kevt.name = 'CreateFile'
-      and file.operation = 'OPEN'
-      and kevt.category = 'file'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not ps.name in ('OneDrive.exe', 'explorer.exe', 'SearchIndexer.exe')
-    )|
-    |(
-      kevt.name = 'EnumDirectory'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
     )|
     |(
       kevt.name = 'CreateFile'
-      and kevt.arg[create_disposition] = 'SUPERSEDE'
-      and kevt.arg[share_mask] = 'READ|WRITE|DELETE'
-      and kevt.arg[create_options] = 'NON_DIRECTORY_FILE|OPEN_REPARSE_POINT'
-      and not (
-        ps.name in (
-          'OneDrive.exe',
-          'Dropbox.exe',
-          'BackupService.exe',
-          'GoogleDriveFS.exe',
-          'BoxSync.exe',
-          'SafeBackup.exe',
-          'explorer.exe'
-        )
-      )
+      and kevt.arg[share_mask] = 'READ|DELETE'
+      and kevt.arg[file_name] iendswith '.exe'
     )|
-
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'DATA'
+      and file.view.size = 90112
+    )|
+    |(
+      kevt.name = 'UnmapViewFile'
+      and file.view.type = 'DATA'
+      and file.view.size = 90112
+    )|
     |(
       kevt.name = 'CreateFile'
-      and kevt.arg[create_disposition] = 'SUPERSEDE'
-      and kevt.arg[share_mask] = 'READ|WRITE|DELETE'
-      and kevt.arg[create_options] = 'NON_DIRECTORY_FILE|OPEN_REPARSE_POINT'
+      and kevt.arg[share_mask] = 'READ'
+      and kevt.arg[file_name] iendswith '.exe'
     )|
 
 output: |
-  Thanos ransomware behavior detected:
+  Potential Thanos ransomware startup pattern detected:
   Process: %ps.name (PID: %ps.pid)
   Command Line: %ps.cmdline
   Parent Process: %ps.parent.name (PPID: %ps.ppid)
-  First accessed path: %file.name
+  - Observed repeated self-executable mapping pattern
 
 severity: critical
 
