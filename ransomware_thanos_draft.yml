@@ -1,13 +1,11 @@
-name: Thanos Aggressive File I/O Pattern (Revised)
-id: a1b2c3d4-e5f6-7890-ab12-cd34ef56ab7d
+name: Thanos Aggressive Encryption Activity
+id: 12345678-abcd-90ef-1234-567890abcdef
 version: 1.0.0
 description: >
-  Detects Thanos ransomware activity by identifying a process (grouped by ps.uuid) that
-  first enumerates a common user directory (Desktop, Pictures, Videos, or Documents),
-  then issues two CreateFile events in quick succession using a SUPERSEDE disposition with
-  create_options including NON_DIRECTORY_FILE and OPEN_REPARSE_POINT that fail with
-  "The process cannot access." The second CreateFile event includes an extra condition on the IRP field
-  to prevent duplicate expression definitions.
+  Detects aggressive file encryption activity consistent with Thanos ransomware. This rule fires when a process (grouped by ps.uuid)
+  first issues a CreateFile event with a SUPERSEDE disposition and create_options including NON_DIRECTORY_FILE and OPEN_REPARSE_POINT that fails
+  with "The process cannot access," immediately followed (within 500ms) by a WriteFile event writing data to a file whose name ends with .crypted.
+  Such a rapid sequence indicates an attempted in-place encryption of a user file.
 enabled: true
 
 labels:
@@ -28,19 +26,10 @@ references:
 
 condition: >
   sequence
-    maxspan 10ms
+    maxspan 500ms
     by ps.uuid
 
     |(
-      kevt.name = 'EnumDirectory'
-      and (
-           kevt.arg[directory] imatches '?:\\Users\\*\\Desktop\\*'
-        or kevt.arg[directory] imatches '?:\\Users\\*\\Pictures\\*'
-        or kevt.arg[directory] imatches '?:\\Users\\*\\Videos\\*'
-        or kevt.arg[directory] imatches '?:\\Users\\*\\Documents\\*'
-      )
-    )|
-    |(
       kevt.name = 'CreateFile'
       and kevt.arg[create_disposition] = 'SUPERSEDE'
       and kevt.arg[create_options] contains 'NON_DIRECTORY_FILE'
@@ -49,21 +38,13 @@ condition: >
       and file.name imatches '?:\\Users\\*\\*'
     )|
     |(
-      kevt.name = 'CreateFile'
-      and kevt.arg[create_disposition] = 'SUPERSEDE'
-      and kevt.arg[create_options] contains 'NON_DIRECTORY_FILE'
-      and kevt.arg[create_options] contains 'OPEN_REPARSE_POINT'
-      and kevt.arg[status] = 'The process cannot access'
-      and file.name imatches '?:\\Users\\*\\*'
-      and kevt.arg[irp] != ''
-    )|
-    |(
-      kevt.name = 'EnumDirectory'
-      and kevt.arg[directory] imatches '?:\\Users\\*\\*'
+      kevt.name = 'WriteFile'
+      and file.name imatches '?:\\Users\\*\\*.crypted'
+      and file.io.size > 0
     )|
 
 output: |
-  Thanos aggressive file I/O pattern detected: process %ps.name issued repeated suspicious CreateFile operations on %file.name.
+  Thanos aggressive encryption activity detected: process %ps.name attempted to encrypt %file.name.
 severity: critical
 action:
   - name: kill
