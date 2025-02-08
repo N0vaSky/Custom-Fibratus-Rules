@@ -1,10 +1,10 @@
-name: Hive Ransomware Initial Pattern
+name: Hive Ransomware Multi-Process Pattern
 id: 95a1d8c3-7e4b-42f5-b9d1-8c5e4f6a2b3d
-version: 1.0.0
+version: 2.0.0
 description: |
-  Detects Hive ransomware through its distinctive cryptography initialization
-  and SysWOW64 interaction patterns. Focuses on unique sequence of crypto
-  operations and specific file access patterns.
+  Detects Hive ransomware through its multi-process execution pattern,
+  including process spawning and command execution chains.
+  Focuses on both the initial process and its spawned processes.
 
 enabled: true
 
@@ -20,6 +20,7 @@ tags:
   - ransomware
   - hive
   - early-detection
+  - process-chains
 
 references:
   - https://attack.mitre.org/techniques/T1486/
@@ -44,45 +45,49 @@ condition: >
           'System'
         )
       )
-      and not ps.exe imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\explorer.exe'
-      )
     )|
     |(
-      kevt.name = 'EnumDirectory'
-      and kevt.arg[directory] imatches 'C:\\Windows\\SysWOW64'
-      and kevt.arg[file_name] imatches (
-        'CRYPTBASE.DLL',
-        'apphelp.dll'
+      kevt.name = 'CreateProcess'
+      and ps.child.name in (
+        'cmd.exe',
+        'taskkill.exe',
+        'powershell.exe'
       )
     )|
     |(
       kevt.name = 'CreateFile'
       and kevt.arg[create_options] icontains 'NO_INTERMEDIATE_BUFFERING'
-      and kevt.arg[share_mask] = 'READ|WRITE'
+      and (
+        kevt.arg[share_mask] = 'READ|WRITE'
+        or
+        kevt.arg[share_mask] = 'READ|DELETE'
+      )
     )|
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'IMAGE'
       and file.name imatches (
         '*\\cryptbase.dll',
-        '*\\bcrypt.dll'
+        '*\\bcrypt.dll',
+        '*\\winmm.dll'
       )
     )|
     |(
       kevt.name = 'CreateFile'
-      and kevt.arg[share_mask] = 'READ|DELETE'
-      and file.name imatches '*\\winmm.dll'
+      and kevt.arg[share_mask] in ('READ|WRITE', 'READ|DELETE')
+      and not file.name imatches (
+        'C:\\Windows\\*',
+        'C:\\Program Files*'
+      )
     )|
 
 output: |
-  Hive ransomware behavior detected:
+  Hive ransomware chain detected:
   Process: %ps.name (PID %ps.pid)
   Image Path: %ps.exe
   Parent Process: %ps.parent.name (PPID %ps.ppid)
   Event: %kevt.name on %file.name
-  Options: %kevt.arg[create_options]
+  Child Process: %ps.child.name
 
 severity: critical
 
