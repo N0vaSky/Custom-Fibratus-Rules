@@ -44,6 +44,10 @@ condition: >
           'System'
         )
       )
+      and not ps.exe imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\explorer.exe'
+      )
     )|
     |(
       kevt.name = 'EnumDirectory'
