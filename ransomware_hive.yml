@@ -1,0 +1,88 @@
+name: Hive Ransomware Initial Pattern
+id: 95a1d8c3-7e4b-42f5-b9d1-8c5e4f6a2b3d
+version: 1.0.0
+description: |
+  Detects Hive ransomware through its distinctive cryptography initialization
+  and SysWOW64 interaction patterns. Focuses on unique sequence of crypto
+  operations and specific file access patterns.
+
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - hive
+  - early-detection
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence
+    maxspan 50ms
+    by ps.uuid
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and not (
+        ps.name in (
+          'svchost.exe',
+          'services.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'smss.exe',
+          'wininit.exe',
+          'winlogon.exe',
+          'explorer.exe',
+          'System'
+        )
+      )
+    )|
+    |(
+      kevt.name = 'EnumDirectory'
+      and kevt.arg[directory] imatches 'C:\\Windows\\SysWOW64'
+      and kevt.arg[file_name] imatches (
+        'CRYPTBASE.DLL',
+        'apphelp.dll'
+      )
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and kevt.arg[create_options] icontains 'NO_INTERMEDIATE_BUFFERING'
+      and kevt.arg[share_mask] = 'READ|WRITE'
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'IMAGE'
+      and file.name imatches (
+        '*\\cryptbase.dll',
+        '*\\bcrypt.dll'
+      )
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and kevt.arg[share_mask] = 'READ|DELETE'
+      and file.name imatches '*\\winmm.dll'
+    )|
+
+output: |
+  Hive ransomware behavior detected:
+  Process: %ps.name (PID %ps.pid)
+  Image Path: %ps.exe
+  Parent Process: %ps.parent.name (PPID %ps.ppid)
+  Event: %kevt.name on %file.name
+  Options: %kevt.arg[create_options]
+
+severity: critical
+
+action:
+  - name: kill
+
+min-engine-version: 2.0.0
