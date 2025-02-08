@@ -1,0 +1,119 @@
+name: Unified Ransomware Initial Detection Pattern
+id: 845e2f1a-6f3d-42a1-9d3c-e148e5c88c2d
+version: 1.0.0
+description: |
+  Unified detection rule that combines behavioral patterns from Thanos, Vipasana,
+  and WannaCry ransomware variants. Focuses on common initialization sequences
+  and file operations seen across multiple ransomware families.
+
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - thanos
+  - vipasana
+  - wannacry
+  - early-detection
+  - unified-detection
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence
+    maxspan 50ms
+    by ps.uuid
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and not (
+        ps.name in (
+          'svchost.exe',
+          'services.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'smss.exe',
+          'wininit.exe',
+          'winlogon.exe',
+          'explorer.exe',
+          'System',
+          'MsMpEng.exe',
+          'TrustedInstaller.exe',
+          'RuntimeBroker.exe',
+          'SearchIndexer.exe',
+          'spoolsv.exe'
+        )
+      )
+      and not ps.exe imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\explorer.exe',
+        '?:\\Program Files\\Windows Defender\\*'
+      )
+    )|
+    |(
+      (
+        kevt.name = 'CreateFile'
+        and (
+          kevt.arg[share_mask] = 'READ|DELETE'
+          or
+          kevt.arg[share_mask] = 'READ|WRITE|DELETE'
+        )
+      )
+      or
+      (
+        kevt.name = 'MapViewFile'
+        and file.view.type = 'DATA'
+      )
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and file.name imatches 'C:\\Windows'
+      and kevt.arg[type] = 'Directory'
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'IMAGE'
+      and file.name imatches (
+        'C:\\Windows\\System32\\*.dll',
+        'C:\\Windows\\SysWOW64\\*.dll'
+      )
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and file.name imatches 'C:\\Users\\*\\Desktop\\'
+      and kevt.arg[type] = 'Directory'
+    )|
+    |(
+      (
+        kevt.name = 'MapViewFile'
+        and file.view.type = 'IMAGE'
+      )
+      or
+      (
+        kevt.name = 'UnmapViewFile'
+        and file.view.type in ('DATA', 'IMAGE_NO_EXECUTE')
+      )
+    )|
+
+output: |
+  Ransomware initialization pattern detected:
+  Process: %ps.name (PID %ps.pid)
+  Image Path: %ps.exe
+  Parent Process: %ps.parent.name (PPID %ps.ppid)
+  Initial Events: %kevt.name on %file.name
+  Share Mask: %kevt.arg[share_mask]
+  
+severity: critical
+
+action:
+  - name: kill
+
+min-engine-version: 2.0.0
