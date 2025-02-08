@@ -1,10 +1,10 @@
-name: Gamma Ransomware Instant File Operation Detection
+name: Gamma Ransomware Pre-Execution Detection
 id: 8e72a1b4-5f9d-42c1-b9e1-6a8f37d49b5c
-version: 5.0.0
+version: 6.0.0
 description: |
-  Detects Gamma ransomware by its immediate file operations without setup phase.
-  Focuses on directory access followed by instant rename/write operations.
-  Rule targets the first file operations before encryption spreads.
+  Pre-execution detection for Gamma ransomware targeting the initialization
+  phase before any file operations begin. Uses patterns from successful
+  detection of other ransomware variants combined with Gamma's unique behavior.
 
 enabled: true
 
@@ -19,7 +19,7 @@ labels:
 tags:
   - ransomware
   - gamma
-  - instant-encryption
+  - pre-execution
 
 references:
   - https://attack.mitre.org/techniques/T1486/
@@ -29,10 +29,7 @@ condition: >
     maxspan 5ms
     by ps.uuid
     |(
-      kevt.name = 'CreateFile'
-      and kevt.arg[type] = 'Directory'
-      and kevt.arg[share_mask] = 'READ|WRITE|DELETE'
-      and file.name imatches 'C:\\Users\\*'
+      kevt.name = 'CreateProcess'
       and not (
         ps.name in (
           'svchost.exe',
@@ -46,28 +43,38 @@ condition: >
           'System'
         )
       )
-    )|
-    |(
-      kevt.name in ('RenameFile', 'WriteFile')
-      and file.name imatches (
-        'C:\\Users\\*\\*.txt',
-        'C:\\Users\\*\\*.zip',
-        'C:\\Users\\*\\*.pdf',
-        'C:\\Users\\*\\*.doc*'
+      and not ps.exe imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\explorer.exe',
+        '?:\\Program Files\\*',
+        '?:\\ProgramData\\*'
       )
     )|
     |(
-      kevt.name = 'WriteFile'
-      and file.io.size > 1000000
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and (
+        file.view.size = 16384 
+        or 
+        file.view.size = 65536
+      )
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'IMAGE'
+      and (
+        file.name imatches '*\\kernel32.dll'
+        or
+        file.name imatches '*\\KernelBase.dll'
+      )
     )|
 
 output: |
-  Gamma ransomware file operations detected:
+  Gamma ransomware pre-execution detected:
   Process: %ps.name (PID %ps.pid)
   Command Line: %ps.cmdline
-  File: %file.name
-  Operation: %kevt.name
-  Write Size: %file.io.size
+  Initial Events: %kevt.name on %file.name
+  Memory Map: Size %file.view.size
 
 severity: critical
 
