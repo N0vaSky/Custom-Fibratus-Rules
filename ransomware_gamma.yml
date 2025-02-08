@@ -1,10 +1,10 @@
-name: Gamma Ransomware Detection
+name: Gamma Ransomware Memory Pattern Detection
 id: 8e72a1b4-5f9d-42c1-b9e1-6a8f37d49b5c
-version: 2.0.0
+version: 3.0.0
 description: |
-  Detection focusing only on Gamma's first 2-3 operations.
-  Uses minimal sequence to catch it as early as possible.
-  Must trigger within microseconds of execution.
+  Extreme detection focusing on Gamma's unique memory patterns.
+  Targets specific memory addresses and instant operations.
+  Must detect within nanoseconds of first memory operation.
 
 enabled: true
 
@@ -19,50 +19,42 @@ labels:
 tags:
   - ransomware
   - gamma
-  - instant-detection
+  - memory-pattern
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
-  sequence
-    maxspan 1ms
-    by ps.uuid
-    |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'PAGEFILE'
-      and file.view.size = 16384
-      and not (
-        ps.name in (
-          'svchost.exe',
-          'services.exe',
-          'lsass.exe',
-          'csrss.exe',
-          'smss.exe',
-          'wininit.exe',
-          'winlogon.exe',
-          'explorer.exe',
-          'System'
-        )
-      )
-    )|
-    |(
-      kevt.name = 'CreateFile'
-      and kevt.arg[share_mask] = 'READ|WRITE'
-      and kevt.arg[type] = 'Directory'
-    )|
-    |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'IMAGE'
-      and file.name imatches '*\\kernel*.dll'
-      and file.view.size > 500000
-    )|
+  kevt.name = 'MapViewFile'
+  and file.view.type = 'PAGEFILE'
+  and file.view.size = 16384
+  and not (
+    ps.name in (
+      'svchost.exe',
+      'services.exe',
+      'lsass.exe',
+      'csrss.exe',
+      'smss.exe',
+      'wininit.exe',
+      'winlogon.exe',
+      'explorer.exe',
+      'System'
+    )
+  )
+  and not ps.parent.name in (
+    'services.exe',
+    'wininit.exe',
+    'winlogon.exe',
+    'explorer.exe',
+    'System'
+  )
 
 output: |
-  Gamma ransomware initial execution detected:
+  Gamma ransomware memory pattern detected:
   Process: %ps.name (PID %ps.pid)
   Command Line: %ps.cmdline
-  Event: %kevt.name on %file.name
+  Memory Map: %file.view.base size %file.view.size
+  Parent: %ps.parent.name
 
 severity: critical
 
