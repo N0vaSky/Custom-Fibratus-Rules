@@ -1,10 +1,10 @@
-name: Unified Ransomware Initial Detection Pattern
+name: Aggressive Unified Ransomware Detection
 id: 845e2f1a-6f3d-42a1-9d3c-e148e5c88c2d
-version: 1.1.0
+version: 3.0.0
 description: |
-  Unified detection rule combining critical behavioral patterns from Thanos, Vipasana,
-  and WannaCry ransomware variants. Focuses on the five most distinctive initialization 
-  sequences common across ransomware families.
+  Highly aggressive ransomware detection rule targeting early-stage behaviors 
+  common across variants. Uses broader pattern matching while maintaining strict
+  system process exclusions to prevent false positives.
 
 enabled: true
 
@@ -18,10 +18,8 @@ labels:
 
 tags:
   - ransomware
-  - thanos
-  - vipasana
-  - wannacry
   - early-detection
+  - aggressive-detection
 
 references:
   - https://attack.mitre.org/techniques/T1486/
@@ -31,8 +29,7 @@ condition: >
     maxspan 50ms
     by ps.uuid
     |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'PAGEFILE'
+      kevt.name in ('MapViewFile', 'CreateFile', 'EnumDirectory')
       and not (
         ps.name in (
           'svchost.exe',
@@ -44,45 +41,90 @@ condition: >
           'winlogon.exe',
           'explorer.exe',
           'System',
-          'MsMpEng.exe'
+          'MsMpEng.exe',
+          'TrustedInstaller.exe',
+          'RuntimeBroker.exe',
+          'SearchIndexer.exe',
+          'spoolsv.exe',
+          'WmiPrvSE.exe',
+          'dllhost.exe',
+          'taskhostw.exe',
+          'SgrmBroker.exe',
+          'ShellExperienceHost.exe',
+          'sihost.exe',
+          'fontdrvhost.exe',
+          'dwm.exe',
+          'ctfmon.exe',
+          'TextInputHost.exe',
+          'SearchHost.exe',
+          'Registry',
+          'Idle'
         )
       )
       and not ps.exe imatches (
         '?:\\Windows\\System32\\*',
-        '?:\\Windows\\explorer.exe'
+        '?:\\Windows\\explorer.exe',
+        '?:\\Program Files\\Windows Defender\\*',
+        '?:\\Program Files\\*',
+        '?:\\Program Files (x86)\\*',
+        '?:\\Windows\\SystemApps\\*'
+      )
+      and not ps.parent.name in (
+        'services.exe',
+        'wininit.exe',
+        'lsass.exe',
+        'winlogon.exe',
+        'System',
+        'smss.exe'
+      )
+    )|
+    |(
+      kevt.name = 'EnumDirectory'
+      and kevt.arg[directory] imatches (
+        'C:\\Users\\*\\Pictures\\*',
+        'C:\\Users\\*\\Documents\\*',
+        'C:\\Users\\*\\Desktop\\*',
+        'C:\\Users\\*\\Downloads\\*',
+        'C:\\Users\\*\\Videos\\*',
+        'C:\\Users\\*\\Music\\*'
       )
     )|
     |(
       kevt.name = 'CreateFile'
-      and file.name imatches 'C:\\Windows'
-      and kevt.arg[type] = 'Directory'
-    )|
-    |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'IMAGE'
-      and file.name imatches (
-        'C:\\Windows\\System32\\*.dll',
-        'C:\\Windows\\SysWOW64\\*.dll'
+      and (
+        kevt.arg[create_disposition] in ('SUPERSEDE', 'OVERWRITE', 'OPEN')
+        or
+        kevt.arg[create_options] icontains 'NON_DIRECTORY_FILE'
       )
     )|
     |(
-      kevt.name = 'CreateFile'
-      and file.name imatches 'C:\\Users\\*\\Desktop\\'
-      and kevt.arg[type] = 'Directory'
+      kevt.name = 'MapViewFile'
+      and file.view.type in ('IMAGE', 'DATA', 'PAGEFILE')
+      and not file.name imatches (
+        '?:\\Windows\\System32\\ntdll.dll',
+        '?:\\Windows\\System32\\kernel32.dll',
+        '?:\\Windows\\System32\\kernelbase.dll',
+        '?:\\Windows\\System32\\msvcrt.dll'
+      )
     )|
     |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'IMAGE'
-      and file.name imatches 'C:\\Windows\\*\\*.dll'
+      kevt.name in ('WriteFile', 'RenameFile', 'DeleteFile')
+      and not file.name imatches (
+        '?:\\Windows\\*',
+        '?:\\Program Files\\*',
+        '?:\\ProgramData\\*',
+        '?:\\Users\\*\\AppData\\*'
+      )
     )|
 
 output: |
-  Ransomware initialization pattern detected:
-  Process: %ps.name (PID %ps.pid)
+  Potential ransomware behavior detected:
+  Process: %ps.name (PID: %ps.pid)
   Image Path: %ps.exe
-  Parent Process: %ps.parent.name (PPID %ps.ppid)
-  Initial Events: %kevt.name on %file.name
-  
+  Parent Process: %ps.parent.name (PPID: %ps.ppid)
+  Event: %kevt.name on %kevt.arg[file_name]
+  Directory: %kevt.arg[directory]
+
 severity: critical
 
 action:
