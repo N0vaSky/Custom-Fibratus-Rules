@@ -1,0 +1,94 @@
+name: Gamma Ransomware Ultra-Early Detection
+id: 8e72a1b4-5f9d-42c1-b9e1-6a8f37d49b5c
+version: 1.0.0
+description: |
+  Ultra-aggressive detection for Gamma ransomware targeting its earliest behaviors.
+  Uses extremely tight timing and specific patterns to catch it before encryption.
+  Focuses on initial memory operations and crypto setup.
+
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - gamma
+  - early-detection
+  - ultra-aggressive
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence
+    maxspan 25ms
+    by ps.uuid
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and file.view.size = 16384
+      and not (
+        ps.name in (
+          'svchost.exe',
+          'services.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'smss.exe',
+          'wininit.exe',
+          'winlogon.exe',
+          'explorer.exe',
+          'System'
+        )
+      )
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and (
+        kevt.arg[share_mask] = 'READ|WRITE'
+        or
+        kevt.arg[share_mask] = 'READ|DELETE'
+      )
+      and kevt.arg[create_disposition] in ('OPEN', 'CREATE', 'SUPERSEDE')
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'IMAGE'
+      and file.name imatches (
+        '*\\kernel32.dll',
+        '*\\KernelBase.dll',
+        '*\\bcrypt.dll'
+      )
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and kevt.arg[create_options] icontains 'NO_INTERMEDIATE_BUFFERING'
+      and file.name imatches 'C:\\Users\\*\\AppData\\Local\\Temp\\_MEI*'
+    )|
+    |(
+      kevt.name = 'WriteFile'
+      and file.name imatches (
+        '*\\Crypto\\Cipher\\*',
+        '*\\Edge\\User Data\\*'
+      )
+    )|
+
+output: |
+  Gamma ransomware detected:
+  Process: %ps.name (PID %ps.pid)
+  Command Line: %ps.cmdline
+  Event: %kevt.name on %file.name
+  Options: %kevt.arg[create_options]
+  Share Mask: %kevt.arg[share_mask]
+
+severity: critical
+
+action:
+  - name: kill
+
+min-engine-version: 2.0.0
