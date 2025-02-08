@@ -1,10 +1,10 @@
 name: Unified Ransomware Initial Detection Pattern
 id: 845e2f1a-6f3d-42a1-9d3c-e148e5c88c2d
-version: 1.0.0
+version: 1.1.0
 description: |
-  Unified detection rule that combines behavioral patterns from Thanos, Vipasana,
-  and WannaCry ransomware variants. Focuses on common initialization sequences
-  and file operations seen across multiple ransomware families.
+  Unified detection rule combining critical behavioral patterns from Thanos, Vipasana,
+  and WannaCry ransomware variants. Focuses on the five most distinctive initialization 
+  sequences common across ransomware families.
 
 enabled: true
 
@@ -22,7 +22,6 @@ tags:
   - vipasana
   - wannacry
   - early-detection
-  - unified-detection
 
 references:
   - https://attack.mitre.org/techniques/T1486/
@@ -45,32 +44,12 @@ condition: >
           'winlogon.exe',
           'explorer.exe',
           'System',
-          'MsMpEng.exe',
-          'TrustedInstaller.exe',
-          'RuntimeBroker.exe',
-          'SearchIndexer.exe',
-          'spoolsv.exe'
+          'MsMpEng.exe'
         )
       )
       and not ps.exe imatches (
         '?:\\Windows\\System32\\*',
-        '?:\\Windows\\explorer.exe',
-        '?:\\Program Files\\Windows Defender\\*'
-      )
-    )|
-    |(
-      (
-        kevt.name = 'CreateFile'
-        and (
-          kevt.arg[share_mask] = 'READ|DELETE'
-          or
-          kevt.arg[share_mask] = 'READ|WRITE|DELETE'
-        )
-      )
-      or
-      (
-        kevt.name = 'MapViewFile'
-        and file.view.type = 'DATA'
+        '?:\\Windows\\explorer.exe'
       )
     )|
     |(
@@ -92,15 +71,9 @@ condition: >
       and kevt.arg[type] = 'Directory'
     )|
     |(
-      (
-        kevt.name = 'MapViewFile'
-        and file.view.type = 'IMAGE'
-      )
-      or
-      (
-        kevt.name = 'UnmapViewFile'
-        and file.view.type in ('DATA', 'IMAGE_NO_EXECUTE')
-      )
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'IMAGE'
+      and file.name imatches 'C:\\Windows\\*\\*.dll'
     )|
 
 output: |
@@ -109,7 +82,6 @@ output: |
   Image Path: %ps.exe
   Parent Process: %ps.parent.name (PPID %ps.ppid)
   Initial Events: %kevt.name on %file.name
-  Share Mask: %kevt.arg[share_mask]
   
 severity: critical
 
