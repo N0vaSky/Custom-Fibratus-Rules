@@ -1,10 +1,10 @@
-name: Hive Ransomware Behavior Detection
+name: Hive Ransomware Early Stage Detection
 id: 95a1d8c3-7e4b-42f5-b9d1-8c5e4f6a2b3d
-version: 4.0.0
+version: 5.0.0
 description: |
-  Behavior-based detection for Hive ransomware focusing on command patterns
-  and process behavior rather than specific process names. Detects suspicious
-  batch execution and output redirection regardless of parent process name.
+  Ultra-aggressive early-stage detection for Hive ransomware focusing on
+  the earliest possible indicators before process spawning occurs.
+  Targets initial setup actions that occur before child process creation.
 
 enabled: true
 
@@ -20,28 +20,18 @@ tags:
   - ransomware
   - hive
   - early-detection
-  - behavior-based
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 50ms
+    maxspan 25ms
     by ps.uuid
-    |(
-      kevt.name = 'CreateProcess'
-      and (
-        ps.cmdline icontains '/c shadow.bat'
-        or
-        ps.cmdline icontains '>NUL 2>NUL'
-        or
-        ps.cmdline icontains 'timeout /t'
-      )
-    )|
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
+      and file.view.size = 16384
       and not (
         ps.name in (
           'svchost.exe',
@@ -58,40 +48,32 @@ condition: >
     )|
     |(
       kevt.name = 'CreateFile'
-      and kevt.arg[create_options] = 'DIRECTORY_FILE|SYNCHRONOUS_IO_NONALERT'
-      and kevt.arg[share_mask] = 'READ|WRITE'
-      and ps.name = 'cmd.exe'
-      and ps.cmdline icontains 'shadow.bat'
+      and kevt.arg[create_options] icontains 'DIRECTORY_FILE'
+      and file.name imatches 'C:\\Windows'
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'IMAGE'
+      and file.name imatches '*\\wow64.dll'
+    )|
+    |(
+      kevt.name = 'EnumDirectory'
+      and kevt.arg[directory] imatches 'C:\\Windows\\System32'
     )|
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'IMAGE'
       and file.name imatches (
-        '*\\wow64.dll',
         '*\\kernel32.dll',
-        '*\\cryptbase.dll'
-      )
-    )|
-    |(
-      kevt.name = 'CreateProcess'
-      and ps.name in (
-        'cmd.exe',
-        'timeout.exe',
-        'powershell.exe'
-      )
-      and ps.cmdline icontains (
-        'shadow.bat',
-        '>NUL',
-        'timeout /t'
+        '*\\KernelBase.dll'
       )
     )|
 
 output: |
-  Hive ransomware behavior detected:
+  Hive ransomware early stage detected:
   Process: %ps.name (PID %ps.pid)
   Parent: %ps.parent.name (PPID %ps.ppid)
   Command Line: %ps.cmdline
-  Parent Command: %ps.parent.cmdline
   Event: %kevt.name on %file.name
 
 severity: critical
