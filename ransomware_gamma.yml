@@ -1,10 +1,10 @@
-name: Gamma Ransomware Pre-Execution Detection
+name: Gamma Ransomware Novel Detection Strategy
 id: 8e72a1b4-5f9d-42c1-b9e1-6a8f37d49b5c
-version: 6.0.0
+version: 7.0.0
 description: |
-  Pre-execution detection for Gamma ransomware targeting the initialization
-  phase before any file operations begin. Uses patterns from successful
-  detection of other ransomware variants combined with Gamma's unique behavior.
+  Novel detection approach for ultra-fast Gamma ransomware focusing on
+  unique memory and threading patterns before screen blanking occurs.
+  Targets the precise moment of execution initiation.
 
 enabled: true
 
@@ -19,17 +19,17 @@ labels:
 tags:
   - ransomware
   - gamma
-  - pre-execution
+  - novel-detection
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 5ms
+    maxspan 2ms
     by ps.uuid
     |(
-      kevt.name = 'CreateProcess'
+      kevt.name = 'CreateThread'
       and not (
         ps.name in (
           'svchost.exe',
@@ -43,38 +43,28 @@ condition: >
           'System'
         )
       )
-      and not ps.exe imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\explorer.exe',
-        '?:\\Program Files\\*',
-        '?:\\ProgramData\\*'
-      )
-    )|
-    |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'PAGEFILE'
-      and (
-        file.view.size = 16384 
-        or 
-        file.view.size = 65536
-      )
     )|
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'IMAGE'
       and (
-        file.name imatches '*\\kernel32.dll'
-        or
-        file.name imatches '*\\KernelBase.dll'
+        file.name imatches '*\\gdi32.dll'
+        or 
+        file.name imatches '*\\user32.dll'
       )
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and kevt.arg[create_options] icontains 'DIRECTORY_FILE'
+      and kevt.arg[share_mask] = 'READ|WRITE'
     )|
 
 output: |
-  Gamma ransomware pre-execution detected:
+  Gamma ransomware pre-blank screen detected:
   Process: %ps.name (PID %ps.pid)
   Command Line: %ps.cmdline
-  Initial Events: %kevt.name on %file.name
-  Memory Map: Size %file.view.size
+  Thread Creation: %kevt.name
+  Display DLL: %file.name
 
 severity: critical
 
