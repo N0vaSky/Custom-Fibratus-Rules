@@ -1,10 +1,10 @@
-name: Gamma Ransomware Novel Detection Strategy
+name: Gamma Ransomware Pre-Execution Detection
 id: 8e72a1b4-5f9d-42c1-b9e1-6a8f37d49b5c
-version: 7.0.0
+version: 8.0.0
 description: |
-  Novel detection approach for ultra-fast Gamma ransomware focusing on
-  unique memory and threading patterns before screen blanking occurs.
-  Targets the precise moment of execution initiation.
+  Ultra-early detection targeting Gamma's unique loading pattern before
+  any file operations. Focuses on image loading and memory operations
+  that occur in the first microseconds of execution.
 
 enabled: true
 
@@ -19,17 +19,19 @@ labels:
 tags:
   - ransomware
   - gamma
-  - novel-detection
+  - memory-operations
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 2ms
+    maxspan 5ms
     by ps.uuid
     |(
-      kevt.name = 'CreateThread'
+      kevt.name = 'LoadImage'
+      and kevt.arg[is_exec] = true
+      and kevt.arg[signature_level] = 'UNCHECKED'
       and not (
         ps.name in (
           'svchost.exe',
@@ -45,26 +47,22 @@ condition: >
       )
     )|
     |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'IMAGE'
-      and (
-        file.name imatches '*\\gdi32.dll'
-        or 
-        file.name imatches '*\\user32.dll'
-      )
+      kevt.name = 'VirtualAlloc'
+      and kevt.arg[page_type] = 'PRIVATE'
+      and kevt.arg[protection_mask] = 'RW'
     )|
     |(
-      kevt.name = 'CreateFile'
-      and kevt.arg[create_options] icontains 'DIRECTORY_FILE'
-      and kevt.arg[share_mask] = 'READ|WRITE'
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and file.view.size = 16384
     )|
 
 output: |
-  Gamma ransomware pre-blank screen detected:
+  Gamma ransomware loading detected:
   Process: %ps.name (PID %ps.pid)
-  Command Line: %ps.cmdline
-  Thread Creation: %kevt.name
-  Display DLL: %file.name
+  Image Path: %ps.exe
+  Memory Operations: %kevt.name
+  Memory Info: Size %file.view.size Type %file.view.type
 
 severity: critical
 
