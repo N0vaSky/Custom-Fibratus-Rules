@@ -1,10 +1,10 @@
-name: Gamma Ransomware Memory Pattern Detection
+name: Gamma Ransomware Crypto Pattern Detection
 id: 8e72a1b4-5f9d-42c1-b9e1-6a8f37d49b5c
-version: 3.0.0
+version: 4.0.0
 description: |
-  Extreme detection focusing on Gamma's unique memory patterns.
-  Targets specific memory addresses and instant operations.
-  Must detect within nanoseconds of first memory operation.
+  Detects Gamma ransomware through its unique crypto initialization patterns.
+  Focuses on specific file operations and crypto module setup.
+  Designed for early detection while avoiding system interference.
 
 enabled: true
 
@@ -19,42 +19,62 @@ labels:
 tags:
   - ransomware
   - gamma
-  - memory-pattern
+  - crypto-pattern
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
-  kevt.name = 'MapViewFile'
-  and file.view.type = 'PAGEFILE'
-  and file.view.size = 16384
-  and not (
-    ps.name in (
-      'svchost.exe',
-      'services.exe',
-      'lsass.exe',
-      'csrss.exe',
-      'smss.exe',
-      'wininit.exe',
-      'winlogon.exe',
-      'explorer.exe',
-      'System'
-    )
-  )
-  and not ps.parent.name in (
-    'services.exe',
-    'wininit.exe',
-    'winlogon.exe',
-    'explorer.exe',
-    'System'
-  )
+  sequence
+    maxspan 10ms
+    by ps.uuid
+    |(
+      kevt.name = 'CreateFile'
+      and file.name imatches '*\\_MEI*'
+      and kevt.arg[create_disposition] = 'CREATE'
+      and not (
+        ps.name in (
+          'svchost.exe',
+          'services.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'smss.exe',
+          'wininit.exe',
+          'winlogon.exe',
+          'explorer.exe',
+          'System'
+        )
+      )
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and file.name imatches '*\\Crypto\\Cipher'
+      and kevt.arg[create_disposition] in ('CREATE', 'SUPERSEDE')
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and file.name imatches (
+        '*\\_ARC4.cp37-win_amd64.pyd',
+        '*\\_Salsa20.cp37-win_amd64.pyd'
+      )
+    )|
+    |(
+      kevt.name = 'WriteFile'
+      and file.io.size > 500000
+      and file.name imatches '*\\Crypto\\Cipher\\*'
+    )|
+    |(
+      kevt.name = 'ReadFile'
+      and file.name imatches 'C:\\$Extend\\$UsnJrnl:$J'
+    )|
 
 output: |
-  Gamma ransomware memory pattern detected:
+  Gamma ransomware crypto initialization detected:
   Process: %ps.name (PID %ps.pid)
   Command Line: %ps.cmdline
-  Memory Map: %file.view.base size %file.view.size
-  Parent: %ps.parent.name
+  File: %file.name
+  Operation: %kevt.name
+  Size: %file.io.size
 
 severity: critical
 
