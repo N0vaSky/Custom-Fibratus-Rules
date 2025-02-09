@@ -1,8 +1,9 @@
 name: Crypto Library Kill Rule
 id: b3a92c74-8f16-4d5a-9e2c-f256871bc432
-version: 1.0.0
+version: 1.2.0
 description: |
-  Kills processes attempting to access cryptographic libraries and DLLs.
+  Kills processes attempting to access cryptographic libraries and DLLs,
+  with improved exclusions for legitimate system processes.
 
 enabled: true
 
@@ -40,19 +41,49 @@ condition: >
     )
   )
     and
-  not ps.name in (
-    'svchost.exe',
-    'services.exe',
-    'lsass.exe',
-    'csrss.exe',
-    'smss.exe',
-    'wininit.exe',
-    'winlogon.exe',
-    'explorer.exe',
-    'System'
+  not (
+    ps.name in (
+      'svchost.exe',
+      'services.exe',
+      'lsass.exe',
+      'csrss.exe',
+      'smss.exe',
+      'wininit.exe',
+      'winlogon.exe',
+      'explorer.exe',
+      'System',
+      'vmwp.exe',
+      'vmcompute.exe',
+      'MsMpEng.exe',
+      'TrustedInstaller.exe',
+      'dllhost.exe'
+    )
+      or
+    ps.exe imatches (
+      '?:\\Windows\\System32\\*',
+      '?:\\Windows\\SysWOW64\\*',
+      '?:\\Program Files\\Windows Defender\\*',
+      '?:\\Program Files\\Common Files\\System\\*',
+      '?:\\Program Files\\*\\*.exe'
+    )
+      or
+    ps.domain in (
+      'NT VIRTUAL MACHINE',
+      'NT AUTHORITY'
+    )
+      or
+    ps.username = 'SYSTEM'
+      or
+    ps.parent.name in (
+      'services.exe',
+      'wininit.exe',
+      'vmcompute.exe'
+    )
+      or
+    ps.ancestor[0].name = 'services.exe'
+      or
+    ps.sid = 'S-1-5-18'
   )
-    and
-  not ps.exe imatches '?:\\Windows\\System32\\*'
 
 output: |
   Crypto library access killed: %ps.name (PID %ps.pid) accessing %file.name
