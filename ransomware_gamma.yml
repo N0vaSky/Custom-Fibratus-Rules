@@ -1,9 +1,10 @@
-name: Gamma Ransomware First Operations
-id: 8e72a1b4-5f9d-42c1-b9e1-6a8f37d49b5c
-version: 9.0.0
+name: Gamma Ransomware Detection
+id: 4d8a1f6b-e827-4a3f-a5b2-9c4d7f1e8c0b
+version: 5.0.0
 description: |
-  Targets the exact first operations of Gamma ransomware using precise
-  memory sizes and allocations. Attempts detection in first nanoseconds.
+  Detects Gamma ransomware through its distinctive rapid execution pattern
+  of memory allocation, thread creation, and file I/O. Includes exclusions 
+  for common system processes.
 
 enabled: true
 
@@ -12,56 +13,64 @@ labels:
   tactic.name: Impact
   tactic.ref: https://attack.mitre.org/tactics/TA0040/
   technique.id: T1486
-  technique.name: Data Encrypted for Impact
+  technique.name: Data Encrypted for Impact 
   technique.ref: https://attack.mitre.org/techniques/T1486/
 
 tags:
   - ransomware
   - gamma
-  - memory-operations
+  - early-detection
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 2ms
+    maxspan 10ms
     by ps.uuid
     |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'PAGEFILE'
-      and file.view.size = 16384
+      kevt.name in ('VirtualAlloc', 'MapViewFile')  
+      and ps.name != 'explorer.exe'
       and not (
         ps.name in (
           'svchost.exe',
           'services.exe',
-          'lsass.exe',
+          'lsass.exe', 
           'csrss.exe',
           'smss.exe',
           'wininit.exe',
           'winlogon.exe',
-          'explorer.exe',
           'System'
         )
       )
-    )|
-    |(
-      kevt.name = 'LoadImage'
-      and kevt.arg[signature_level] = 'UNCHECKED'
-      and kevt.arg[is_exec] = true
+      and not ps.exe imatches '?:\\\\Windows\\\\*'
     )|
     |(
       kevt.name = 'VirtualAlloc'
-      and kevt.arg[protection_mask] = 'RW'
-      and kevt.arg[region_size] = 12288
+      and mem.alloc = 'COMMIT'
+    )|
+    |(
+      kevt.name = 'CreateThread'
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and file.name imatches '?:\\\\Windows\\\\*' 
+      and file.type = 'Directory'
+    )|
+    |(
+      kevt.name in ('CreateFile', 'ReadFile', 'WriteFile')
+      and file.name imatches '?:\\\\Users\\\\*'
+      and not file.name imatches '?:\\\\Users\\\\*\\\\AppData\\\\*'
     )|
 
 output: |
-  Gamma ransomware initial memory operations:
+  Gamma ransomware behavior detected:
   Process: %ps.name (PID %ps.pid)
-  Image Path: %ps.exe
-  Operation: %kevt.name
-  Memory: Size %kevt.arg[region_size] Protection %kevt.arg[protection_mask]
+  Image Path: %ps.exe  
+  Suspect Events:
+    - Memory allocations and mapping
+    - New thread creation
+    - File I/O on Windows and user directories
 
 severity: critical
 
