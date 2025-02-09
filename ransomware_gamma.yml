@@ -1,11 +1,11 @@
 name: Gamma Ransomware Ultra-Early Detection
 id: 7c52a891-d436-4ea1-9a3d-f2e9c4b87d25
-version: 1.0.0
+version: 1.1.0
 description: |
   Ultra-aggressive detection targeting Gamma ransomware's initial execution pattern.
   Focuses on the first 25ms of execution with broad pattern matching and careful
-  system process exclusions. Combines successful patterns from other ransomware
-  detection rules while adding Gamma-specific indicators.
+  system process exclusions. Enhanced to avoid false positives on legitimate
+  Windows processes.
 
 enabled: true
 
@@ -49,14 +49,17 @@ condition: >
           'TrustedInstaller.exe',
           'RuntimeBroker.exe',
           'SearchIndexer.exe',
-          'spoolsv.exe'
+          'spoolsv.exe',
+          'WindowsSandbox.exe',
+          'WindowsSandboxClient.exe'
         )
       )
       and not ps.exe imatches (
         '?:\\Windows\\System32\\*',
         '?:\\Windows\\explorer.exe',
         '?:\\Program Files\\Windows Defender\\*',
-        '?:\\Program Files*\\*'
+        '?:\\Program Files*\\*',
+        '?:\\Windows\\SystemApps\\*'
       )
       and not (
         ps.parent.name in (
@@ -65,27 +68,38 @@ condition: >
           'lsass.exe',
           'winlogon.exe',
           'System',
-          'explorer.exe'
+          'explorer.exe',
+          'WindowsSandbox.exe'
         )
+      )
+      and not ps.domain in (
+        'NT AUTHORITY',
+        'SYSTEM'
       )
     )|
     |(
       kevt.name = 'CreateFile'
-      and file.name imatches 'C:\\Windows'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches (
+        '?:\\Users\\*\\AppData\\*',
+        '?:\\Users\\*\\Temporary Internet Files\\*'
+      )
       and kevt.arg[type] = 'Directory'
     )|
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'IMAGE'
-      and file.name imatches (
+      and not file.name imatches (
         'C:\\Windows\\System32\\*.dll',
-        'C:\\Windows\\SysWOW64\\*.dll'
+        'C:\\Windows\\SysWOW64\\*.dll',
+        'C:\\Windows\\WinSxS\\*'
       )
     )|
     |(
       kevt.name = 'VirtualAlloc'
       and mem.type = 'PRIVATE'
       and mem.protection = 'READWRITE'
+      and not ps.exe imatches '?:\\Windows\\System32\\*'
     )|
     |(
       kevt.name = 'CreateThread'
@@ -95,9 +109,12 @@ condition: >
           'services.exe',
           'lsass.exe',
           'csrss.exe',
-          'System'
+          'System',
+          'WindowsSandbox.exe',
+          'WindowsSandboxClient.exe'
         )
       )
+      and not ps.exe imatches '?:\\Windows\\System32\\*'
     )|
 
 output: |
