@@ -1,9 +1,10 @@
-name: Crypto Library Kill Rule
-id: b3a92c74-8f16-4d5a-9e2c-f256871bc432
-version: 1.2.0
+name: Gamma Ransomware Early Stage Detection
+id: 7e89fc1d-1234-4a6e-b5c9-9876543210ab
+version: 5.0.0
 description: |
-  Kills processes attempting to access cryptographic libraries and DLLs,
-  with improved exclusions for legitimate system processes.
+  Ultra-aggressive early-stage detection for Gamma ransomware focusing on
+  the earliest possible indicators before process spawning occurs.
+  Targets initial setup actions that occur before child process creation.
 
 enabled: true
 
@@ -17,76 +18,55 @@ labels:
 
 tags:
   - ransomware
-  - crypto-libraries
+  - gamma
+  - early-detection
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
 
 condition: >
-  kevt.name in ('CreateFile', 'MapViewFile', 'LoadImage')
-    and
-  (
-    file.name iendswith (
-      'bcrypt.dll',
-      'ncrypt.dll',
-      'crypt32.dll',
-      'cryptdll.dll',
-      'cryptsp.dll',
-      'cryptbase.dll',
-      'cryptui.dll'
-    )
-      or
-    file.name imatches (
-      '*\\Crypto\\Cipher\\*',
-      '*\\cryptography\\hazmat\\*',
-      '*\\_Salsa20.*.pyd',
-      '*\\_ARC4.*.pyd'
-    )
-  )
-    and
-  not (
-    ps.name in (
-      'svchost.exe',
-      'services.exe',
-      'lsass.exe',
-      'csrss.exe',
-      'smss.exe',
-      'wininit.exe',
-      'winlogon.exe',
-      'explorer.exe',
-      'System',
-      'vmwp.exe',
-      'vmcompute.exe',
-      'MsMpEng.exe',
-      'TrustedInstaller.exe',
-      'dllhost.exe'
-    )
-      or
-    ps.exe imatches (
-      '?:\\Windows\\System32\\*',
-      '?:\\Windows\\SysWOW64\\*',
-      '?:\\Program Files\\Windows Defender\\*',
-      '?:\\Program Files\\Common Files\\System\\*',
-      '?:\\Program Files\\*\\*.exe',
-      '?:\\Program Files (x86)\\*',
-      '?:\\Windows\\sysnative\\*',
-      '?:\\Users\\*\\AppData\\Local\\*',
-      '?:\\Windows\\SystemApps\\*'
-    )
-      or
-    ps.domain in (
-      'NT VIRTUAL MACHINE',
-      'NT AUTHORITY'
-    )
-      or
-    ps.username = 'SYSTEM'
-      or
-    ps.parent.name in (
-      'services.exe',
-      'wininit.exe',
-      'vmcompute.exe'
-    )
-  )
+  sequence
+    maxspan 25ms
+    by ps.uuid
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and not (
+        ps.name in (
+          'svchost.exe',
+          'services.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'smss.exe',
+          'wininit.exe',
+          'winlogon.exe',
+          'explorer.exe',
+          'System'
+        )
+      )
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and kevt.arg[create_options] icontains 'DIRECTORY_FILE'
+      and file.name imatches 'C:\\Users'
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'IMAGE'
+      and file.name imatches '*\\kernel32.dll'
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'DATA'
+      and file.name imatches '*\\local.nls'
+    )|
 
 output: |
-  Crypto library access killed: %ps.name (PID %ps.pid) accessing %file.name
+  Hive ransomware early stage detected:
+  Process: %ps.name (PID %ps.pid)
+  Parent: %ps.parent.name (PPID %ps.ppid)
+  Command Line: %ps.cmdline
+  Event: %kevt.name on %file.name
 
 severity: critical
 
