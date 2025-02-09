@@ -1,5 +1,5 @@
 name: Gamma Ransomware Early Detection
-id: 5f3d2a1c-e8b4-4f9d-a3e9-1c2b3d4e5f6g
+id: 01a45edb-78c2-4a39-9d7c-2f19e384517d
 version: 1.0.0
 description: |
   Detects Gamma Ransomware through its unique pattern of creating multiple 
@@ -52,7 +52,7 @@ condition: >
       kevt.name = 'CreateFile'
       and kevt.arg[create_options] = 'DIRECTORY_FILE|SYNCHRONOUS_IO_NONALERT'
       and file.name imatches 'C:\\Users\\*\\AppData\\Local\\Temp\\_MEI*'
-    )
+    )|
 
 output: |
   Potential Gamma Ransomware detected:
