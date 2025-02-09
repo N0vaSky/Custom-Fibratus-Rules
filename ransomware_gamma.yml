@@ -1,11 +1,10 @@
-name: Gamma Ransomware Ultra-Early Detection
-id: 7c52a891-d436-4ea1-9a3d-f2e9c4b87d25
-version: 1.1.0
+name: Gamma Ransomware Precise Pattern Detection
+id: 90e4f21a-3c8d-4b19-a5e7-f8d3e9b87d25
+version: 1.0.0
 description: |
-  Ultra-aggressive detection targeting Gamma ransomware's initial execution pattern.
-  Focuses on the first 25ms of execution with broad pattern matching and careful
-  system process exclusions. Enhanced to avoid false positives on legitimate
-  Windows processes.
+  Precise detection of Gamma ransomware based on its unique initial execution pattern.
+  Targets the exact sequence of operations observed in Gamma logs while excluding
+  legitimate processes. Ultra-short detection window to catch it before encryption.
 
 enabled: true
 
@@ -21,14 +20,13 @@ tags:
   - ransomware
   - gamma
   - early-detection
-  - memory-patterns
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 25ms
+    maxspan 10ms
     by ps.uuid
     |(
       kevt.name = 'MapViewFile'
@@ -38,91 +36,53 @@ condition: >
         ps.name in (
           'svchost.exe',
           'services.exe',
-          'lsass.exe', 
+          'lsass.exe',
           'csrss.exe',
           'smss.exe',
           'wininit.exe',
           'winlogon.exe',
           'explorer.exe',
-          'System',
-          'MsMpEng.exe',
-          'TrustedInstaller.exe',
-          'RuntimeBroker.exe',
-          'SearchIndexer.exe',
-          'spoolsv.exe',
-          'WindowsSandbox.exe',
-          'WindowsSandboxClient.exe'
+          'System'
         )
-      )
-      and not ps.exe imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\explorer.exe',
-        '?:\\Program Files\\Windows Defender\\*',
-        '?:\\Program Files*\\*',
-        '?:\\Windows\\SystemApps\\*'
-      )
-      and not (
-        ps.parent.name in (
-          'services.exe',
-          'wininit.exe',
-          'lsass.exe',
-          'winlogon.exe',
-          'System',
-          'explorer.exe',
-          'WindowsSandbox.exe'
-        )
-      )
-      and not ps.domain in (
-        'NT AUTHORITY',
-        'SYSTEM'
-      )
-    )|
-    |(
-      kevt.name = 'CreateFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches (
-        '?:\\Users\\*\\AppData\\*',
-        '?:\\Users\\*\\Temporary Internet Files\\*'
-      )
-      and kevt.arg[type] = 'Directory'
-    )|
-    |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'IMAGE'
-      and not file.name imatches (
-        'C:\\Windows\\System32\\*.dll',
-        'C:\\Windows\\SysWOW64\\*.dll',
-        'C:\\Windows\\WinSxS\\*'
       )
     )|
     |(
       kevt.name = 'VirtualAlloc'
       and mem.type = 'PRIVATE'
       and mem.protection = 'READWRITE'
-      and not ps.exe imatches '?:\\Windows\\System32\\*'
+      and mem.alloc = 'COMMIT'
+      and mem.size <= 12288
+    )|
+    |(
+      kevt.name = 'RegOpenKey'
+      and kevt.arg[key_name] imatches 'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Session Manager*'
+    )|
+    |(
+      kevt.name = 'VirtualAlloc'
+      and mem.type = 'PRIVATE'
+      and mem.protection = 'READWRITE'
+      and mem.size >= 400000
     )|
     |(
       kevt.name = 'CreateThread'
+      and thread.prio = 5
       and not (
         ps.name in (
           'svchost.exe',
           'services.exe',
           'lsass.exe',
           'csrss.exe',
-          'System',
-          'WindowsSandbox.exe',
-          'WindowsSandboxClient.exe'
+          'System'
         )
       )
-      and not ps.exe imatches '?:\\Windows\\System32\\*'
     )|
 
 output: |
-  Gamma ransomware early stage detected:
+  Gamma ransomware precise pattern detected:
   Process: %ps.name (PID %ps.pid)
   Parent Process: %ps.parent.name (PPID %ps.ppid)
   Command Line: %ps.cmdline
-  Initial Event: %kevt.name on %file.name
+  Event Sequence: MapView -> VirtualAlloc -> RegOpenKey -> VirtualAlloc -> CreateThread
 
 severity: critical
 
