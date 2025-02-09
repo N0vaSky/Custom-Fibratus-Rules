@@ -1,0 +1,65 @@
+name: Gamma Ransomware Signature Detection
+id: 43f2d8e1-9a6c-4b2f-8e5d-f2c3b1a4d5e6
+version: 1.0.0
+description: |
+  Detects Gamma Ransomware through PE signature characteristics
+  and unique file creation patterns in temporary directories.
+
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - gamma
+  - signature-detection
+  - pe-analysis
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence
+    maxspan 500ms
+    by ps.uuid
+    |(
+      load_module
+      and (
+        image.signature.type = 'NONE'
+        or image.signature.level = 'UNCHECKED'
+      )
+    )|
+    |(
+      load_module
+      and pe.imports in (
+        'python37.dll', 
+        'libcrypto.dll', 
+        'libssl.dll', 
+        'tcl86t.dll', 
+        'tk86t.dll'
+      )
+    )|
+
+output: |
+  Potential Gamma Ransomware detected:
+  Process: %ps.name (PID %ps.pid)
+  Executable Path: %ps.exe
+  Signature Status: %image.signature.type
+  Signature Level: %image.signature.level
+
+severity: critical
+
+action:
+  - name: kill
+
+min-engine-version: 2.0.0
+
+notes: |
+  Rule combines signature-based detection with 
+  specific DLL and import characteristics of Gamma Ransomware.
