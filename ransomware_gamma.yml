@@ -65,8 +65,10 @@ condition: >
       '?:\\Program Files\\Windows Defender\\*',
       '?:\\Program Files\\Common Files\\System\\*',
       '?:\\Program Files\\*\\*.exe',
+      '?:\\Program Files (x86)\\*',
       '?:\\Windows\\sysnative\\*',
-      '?:\\Users\\*\\AppData\\Local\\*'
+      '?:\\Users\\*\\AppData\\Local\\*',
+      '?:\\Windows\\SystemApps\\*'
     )
       or
     ps.domain in (
