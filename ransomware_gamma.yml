@@ -1,10 +1,10 @@
-name: Gamma Ransomware Precise Pattern Detection
+name: Gamma Ransomware Specific Pattern Detection
 id: 90e4f21a-3c8d-4b19-a5e7-f8d3e9b87d25
 version: 1.0.0
 description: |
-  Precise detection of Gamma ransomware based on its unique initial execution pattern.
-  Targets the exact sequence of operations observed in Gamma logs while excluding
-  legitimate processes. Ultra-short detection window to catch it before encryption.
+  Specific detection of Gamma ransomware that excludes normal process initialization patterns.
+  Focuses on unique behavioral aspects that differentiate it from legitimate processes.
+  Enhanced process and path exclusions to prevent false positives.
 
 enabled: true
 
@@ -42,47 +42,63 @@ condition: >
           'wininit.exe',
           'winlogon.exe',
           'explorer.exe',
-          'System'
+          'System',
+          'smartscreen.exe',
+          'WmiPrvSE.exe',
+          'brave.exe',
+          'chrome.exe',
+          'firefox.exe',
+          'msedge.exe'
         )
+      )
+      and not ps.exe imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\SysWOW64\\*',
+        '?:\\Windows\\explorer.exe',
+        '?:\\Program Files\\*',
+        '?:\\Program Files (x86)\\*',
+        '?:\\ProgramData\\*'
+      )
+      and not ps.domain in (
+        'NT AUTHORITY',
+        'SYSTEM',
+        'LOCAL SERVICE',
+        'NETWORK SERVICE'
+      )
+      and not ps.parent.name in (
+        'services.exe',
+        'wininit.exe',
+        'lsass.exe',
+        'winlogon.exe',
+        'System',
+        'svchost.exe'
       )
     )|
     |(
-      kevt.name = 'VirtualAlloc'
-      and mem.type = 'PRIVATE'
-      and mem.protection = 'READWRITE'
-      and mem.alloc = 'COMMIT'
-      and mem.size <= 12288
+      kevt.name = 'CreateFile'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches (
+        '?:\\Users\\*\\AppData\\*',
+        '?:\\Users\\*\\Temporary Internet Files\\*'
+      )
+      and kevt.arg[type] = 'Directory'
+      and kevt.arg[share_mask] = 'READ|WRITE|DELETE'
     )|
     |(
-      kevt.name = 'RegOpenKey'
-      and kevt.arg[key_name] imatches 'HKEY_LOCAL_MACHINE\\System\\CurrentControlSet\\Control\\Session Manager*'
-    )|
-    |(
-      kevt.name = 'VirtualAlloc'
-      and mem.type = 'PRIVATE'
-      and mem.protection = 'READWRITE'
-      and mem.size >= 400000
-    )|
-    |(
-      kevt.name = 'CreateThread'
-      and thread.prio = 5
-      and not (
-        ps.name in (
-          'svchost.exe',
-          'services.exe',
-          'lsass.exe',
-          'csrss.exe',
-          'System'
-        )
+      kevt.name = 'EnumDirectory'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches (
+        '?:\\Users\\*\\AppData\\*',
+        '?:\\Users\\*\\Temporary Internet Files\\*'
       )
     )|
 
 output: |
-  Gamma ransomware precise pattern detected:
+  Gamma ransomware specific pattern detected:
   Process: %ps.name (PID %ps.pid)
   Parent Process: %ps.parent.name (PPID %ps.ppid)
   Command Line: %ps.cmdline
-  Event Sequence: MapView -> VirtualAlloc -> RegOpenKey -> VirtualAlloc -> CreateThread
+  Event Sequence: Initial memory mapping followed by user directory access
 
 severity: critical
 
