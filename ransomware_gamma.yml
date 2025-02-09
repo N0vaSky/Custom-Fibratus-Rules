@@ -1,10 +1,11 @@
-name: Gamma Ransomware Detection
-id: 4d8a1f6b-e827-4a3f-a5b2-9c4d7f1e8c0b
-version: 5.0.0
+name: Gamma Ransomware Ultra-Early Detection
+id: 7c52a891-d436-4ea1-9a3d-f2e9c4b87d25
+version: 1.0.0
 description: |
-  Detects Gamma ransomware through its distinctive rapid execution pattern
-  of memory allocation, thread creation, and file I/O. Includes exclusions 
-  for common system processes.
+  Ultra-aggressive detection targeting Gamma ransomware's initial execution pattern.
+  Focuses on the first 25ms of execution with broad pattern matching and careful
+  system process exclusions. Combines successful patterns from other ransomware
+  detection rules while adding Gamma-specific indicators.
 
 enabled: true
 
@@ -13,24 +14,26 @@ labels:
   tactic.name: Impact
   tactic.ref: https://attack.mitre.org/tactics/TA0040/
   technique.id: T1486
-  technique.name: Data Encrypted for Impact 
+  technique.name: Data Encrypted for Impact
   technique.ref: https://attack.mitre.org/techniques/T1486/
 
 tags:
   - ransomware
   - gamma
   - early-detection
+  - memory-patterns
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 10ms
+    maxspan 25ms
     by ps.uuid
     |(
-      kevt.name in ('VirtualAlloc', 'MapViewFile')  
-      and ps.name != 'explorer.exe'
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and file.view.size <= 16384
       and not (
         ps.name in (
           'svchost.exe',
@@ -40,37 +43,69 @@ condition: >
           'smss.exe',
           'wininit.exe',
           'winlogon.exe',
-          'System'
+          'explorer.exe',
+          'System',
+          'MsMpEng.exe',
+          'TrustedInstaller.exe',
+          'RuntimeBroker.exe',
+          'SearchIndexer.exe',
+          'spoolsv.exe'
         )
       )
-      and not ps.exe imatches '?:\\\\Windows\\\\*'
-    )|
-    |(
-      kevt.name = 'VirtualAlloc'
-      and mem.alloc = 'COMMIT'
-    )|
-    |(
-      kevt.name = 'CreateThread'
+      and not ps.exe imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\explorer.exe',
+        '?:\\Program Files\\Windows Defender\\*',
+        '?:\\Program Files*\\*'
+      )
+      and not (
+        ps.parent.name in (
+          'services.exe',
+          'wininit.exe',
+          'lsass.exe',
+          'winlogon.exe',
+          'System',
+          'explorer.exe'
+        )
+      )
     )|
     |(
       kevt.name = 'CreateFile'
-      and file.name imatches '?:\\\\Windows\\\\*' 
-      and file.type = 'Directory'
+      and file.name imatches 'C:\\Windows'
+      and kevt.arg[type] = 'Directory'
     )|
     |(
-      kevt.name in ('CreateFile', 'ReadFile', 'WriteFile')
-      and file.name imatches '?:\\\\Users\\\\*'
-      and not file.name imatches '?:\\\\Users\\\\*\\\\AppData\\\\*'
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'IMAGE'
+      and file.name imatches (
+        'C:\\Windows\\System32\\*.dll',
+        'C:\\Windows\\SysWOW64\\*.dll'
+      )
+    )|
+    |(
+      kevt.name = 'VirtualAlloc'
+      and mem.type = 'PRIVATE'
+      and mem.protection = 'READWRITE'
+    )|
+    |(
+      kevt.name = 'CreateThread'
+      and not (
+        ps.name in (
+          'svchost.exe',
+          'services.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'System'
+        )
+      )
     )|
 
 output: |
-  Gamma ransomware behavior detected:
+  Gamma ransomware early stage detected:
   Process: %ps.name (PID %ps.pid)
-  Image Path: %ps.exe  
-  Suspect Events:
-    - Memory allocations and mapping
-    - New thread creation
-    - File I/O on Windows and user directories
+  Parent Process: %ps.parent.name (PPID %ps.ppid)
+  Command Line: %ps.cmdline
+  Initial Event: %kevt.name on %file.name
 
 severity: critical
 
