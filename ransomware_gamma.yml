@@ -64,7 +64,9 @@ condition: >
       '?:\\Windows\\SysWOW64\\*',
       '?:\\Program Files\\Windows Defender\\*',
       '?:\\Program Files\\Common Files\\System\\*',
-      '?:\\Program Files\\*\\*.exe'
+      '?:\\Program Files\\*\\*.exe',
+      '?:\\Windows\\sysnative\\*',
+      '?:\\Users\\*\\AppData\\Local\\*'
     )
       or
     ps.domain in (
@@ -79,10 +81,6 @@ condition: >
       'wininit.exe',
       'vmcompute.exe'
     )
-      or
-    ps.ancestor[0].name = 'services.exe'
-      or
-    ps.sid = 'S-1-5-18'
   )
 
 output: |
