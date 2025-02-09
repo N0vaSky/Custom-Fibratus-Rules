@@ -48,7 +48,7 @@ condition: >
     |(
       kevt.name = 'CreateFile'
       and kevt.arg[create_options] icontains 'DIRECTORY_FILE'
-      and file.name imatches 'C:\\Users'
+      and file.name imatches '?:\\Users\\*'
     )|
     |(
       kevt.name = 'MapViewFile'
