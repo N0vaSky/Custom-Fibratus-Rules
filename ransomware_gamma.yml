@@ -26,7 +26,6 @@ references:
 
 condition: >
   sequence
-    maxspan 20ms
     by ps.uuid
     |(
       kevt.name = 'CreateFile'
