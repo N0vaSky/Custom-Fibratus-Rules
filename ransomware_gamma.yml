@@ -1,10 +1,10 @@
-name: Gamma Ransomware Memory + File Pattern
-id: 9f7aab92-1234-4fcd-85ea-59692f447899
+name: Gamma Ransomware Early Stage Detection
+id: b3a92c74-8f16-4d5a-9e2c-f256871bc432 
 version: 1.0.0
 description: |
-  Detection specifically targeting ransomware initialization combining memory
-  and file operations. Focuses on patterns unique to ransomware behavior
-  rather than general memory allocation sequences.
+  Detects Gamma ransomware through its distinctive pattern of loading crypto-related
+  DLLs and creating crypto directories during initial startup, before encryption begins.
+  Based on confirmed behavioral patterns from Gamma samples.
 
 enabled: true
 
@@ -17,62 +17,58 @@ labels:
   technique.ref: https://attack.mitre.org/techniques/T1486/
 
 tags:
-  - ransomware
+  - ransomware 
   - gamma
-  - hybrid-detection
+  - early-detection
+  - crypto-operations
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 1ms
+    maxspan 50ms
     by ps.uuid
     |(
-      kevt.name = 'VirtualAlloc'
-      and mem.type = 'PRIVATE'
-      and mem.protection = 'READWRITE'
-      and mem.alloc = 'COMMIT'
-      and ps.exe imatches '?:\\Users\\*'
-      and not ps.domain in (
-        'NT AUTHORITY',
-        'SYSTEM',
-        'NT VIRTUAL MACHINE',
-        'LOCAL SERVICE',
-        'NETWORK SERVICE'
-      )
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and file.view.size = 16384
       and not (
         ps.name in (
           'svchost.exe',
-          'services.exe',
+          'services.exe', 
           'lsass.exe',
           'csrss.exe',
-          'System',
-          'vmmem'
+          'smss.exe',
+          'wininit.exe',
+          'winlogon.exe',
+          'explorer.exe',
+          'System'
         )
       )
     )|
     |(
-      kevt.name = 'VirtualAlloc'
-      and mem.alloc icontains 'TOP_DOWN'
-      and mem.type = 'PRIVATE'
+      kevt.name = 'CreateFile'
+      and file.name imatches '*\\Temp\\_MEI*\\Crypto\\*'
+      and kevt.arg[type] = 'Directory'
     )|
     |(
-      kevt.name = 'CreateFile'
-      and kevt.arg[share_mask] = 'READ|WRITE|DELETE'
-      and file.name imatches (
-        '?:\\Users\\*\\Documents\\*.*',
-        '?:\\Users\\*\\Desktop\\*.*',
-        '?:\\Users\\*\\Downloads\\*.*'
-      )
+      kevt.name = 'CreateFile' 
+      and file.name imatches '*\\Crypto\\Cipher\\*'
+      and file.name iendswith '.pyd'
+    )|
+    |(
+      kevt.name = 'WriteFile'
+      and file.name imatches '*\\Crypto\\Cipher\\*'
+      and file.name iendswith '.pyd'
     )|
 
 output: |
-  Gamma ransomware initialization detected:
+  Gamma ransomware crypto operations detected:
   Process: %ps.name (PID %ps.pid)
+  Image Path: %ps.exe
   Parent Process: %ps.parent.name (PPID %ps.ppid)
-  Memory Pattern: COMMIT + TOP_DOWN from user path
-  Initial Target: %file.name
+  Crypto Operations: %kevt.name on %file.name
 
 severity: critical
 
