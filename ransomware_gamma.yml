@@ -1,10 +1,10 @@
-name: Gamma Ransomware Specific Pattern Detection
-id: 90e4f21a-3c8d-4b19-a5e7-f8d3e9b87d25
+name: Gamma Ransomware Instant Execution Detection
+id: 9f7aab92-1234-4fcd-85ea-59692f447892
 version: 1.0.0
 description: |
-  Specific detection of Gamma ransomware that excludes normal process initialization patterns.
-  Focuses on unique behavioral aspects that differentiate it from legitimate processes.
-  Enhanced process and path exclusions to prevent false positives.
+  Ultra-rapid detection targeting Gamma ransomware's unique initial execution pattern.
+  Focuses on the specific filesystem access sequence and directory traversal pattern
+  observed in the first milliseconds of execution.
 
 enabled: true
 
@@ -19,86 +19,53 @@ labels:
 tags:
   - ransomware
   - gamma
-  - early-detection
+  - instant-detection
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 10ms
+    maxspan 1ms
     by ps.uuid
     |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'PAGEFILE'
-      and file.view.size <= 16384
-      and not (
-        ps.name in (
-          'svchost.exe',
-          'services.exe',
-          'lsass.exe',
-          'csrss.exe',
-          'smss.exe',
-          'wininit.exe',
-          'winlogon.exe',
-          'explorer.exe',
-          'System',
-          'smartscreen.exe',
-          'WmiPrvSE.exe',
-          'brave.exe',
-          'chrome.exe',
-          'firefox.exe',
-          'msedge.exe'
-        )
-      )
+      kevt.name = 'CreateFile'
+      and kevt.arg[type] = 'Directory'
+      and kevt.arg[share_mask] = 'READ|WRITE|DELETE'
+      and file.name imatches '?:\\Users\\*'
       and not ps.exe imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\SysWOW64\\*',
-        '?:\\Windows\\explorer.exe',
-        '?:\\Program Files\\*',
-        '?:\\Program Files (x86)\\*',
-        '?:\\ProgramData\\*'
+        '?:\\Windows\\*',
+        '?:\\Program Files*\\*'
       )
+      and ps.parent.name = 'explorer.exe'
       and not ps.domain in (
         'NT AUTHORITY',
         'SYSTEM',
         'LOCAL SERVICE',
         'NETWORK SERVICE'
       )
-      and not ps.parent.name in (
-        'services.exe',
-        'wininit.exe',
-        'lsass.exe',
-        'winlogon.exe',
-        'System',
-        'svchost.exe'
-      )
     )|
     |(
       kevt.name = 'CreateFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches (
-        '?:\\Users\\*\\AppData\\*',
-        '?:\\Users\\*\\Temporary Internet Files\\*'
-      )
-      and kevt.arg[type] = 'Directory'
       and kevt.arg[share_mask] = 'READ|WRITE|DELETE'
+      and file.name imatches (
+        '?:\\Users\\*\\Documents\\*',
+        '?:\\Users\\*\\Desktop\\*',
+        '?:\\Users\\*\\Downloads\\*'
+      )
     )|
     |(
       kevt.name = 'EnumDirectory'
       and file.name imatches '?:\\Users\\*'
-      and not file.name imatches (
-        '?:\\Users\\*\\AppData\\*',
-        '?:\\Users\\*\\Temporary Internet Files\\*'
-      )
+      and kevt.arg[class] icontains 'Directory'
     )|
 
 output: |
-  Gamma ransomware specific pattern detected:
+  Gamma ransomware initial execution detected:
   Process: %ps.name (PID %ps.pid)
   Parent Process: %ps.parent.name (PPID %ps.ppid)
   Command Line: %ps.cmdline
-  Event Sequence: Initial memory mapping followed by user directory access
+  Initial Access: %file.name
 
 severity: critical
 
