@@ -26,7 +26,7 @@ references:
 
 condition: >
   sequence
-    maxspan 500ms
+    maxspan 5ms
     by ps.uuid
     |(
       load_module
