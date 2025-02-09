@@ -26,10 +26,6 @@ references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
-  sequence
-    maxspan 500ms
-    by ps.uuid
-    |(
       create_file
       and file.name imatches 'C:\\Users\\*\\AppData\\Local\\Temp\\_MEI*\\*'
       and (
@@ -45,14 +41,6 @@ condition: >
           'tcl86t.dll'
         )
       )
-      and file.operation = 'OPEN'
-      and not ps.name in ('svchost.exe', 'explorer.exe')
-    )|
-    |(
-      kevt.name = 'CreateFile'
-      and kevt.arg[create_options] = 'DIRECTORY_FILE|SYNCHRONOUS_IO_NONALERT'
-      and file.name imatches 'C:\\Users\\*\\AppData\\Local\\Temp\\_MEI*'
-    )|
 
 output: |
   Potential Gamma Ransomware detected:
