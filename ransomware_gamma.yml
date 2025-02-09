@@ -1,10 +1,10 @@
-name: Gamma Memory Technique Detection
-id: 9f7aab92-1234-4fcd-85ea-59692f447898
+name: Gamma Ransomware Memory + File Pattern
+id: 9f7aab92-1234-4fcd-85ea-59692f447899
 version: 1.0.0
 description: |
-  Detection based on Gamma's fundamental memory initialization technique.
-  Focuses on the sequence of PRIVATE memory allocations it requires
-  during its initialization phase.
+  Detection specifically targeting ransomware initialization combining memory
+  and file operations. Focuses on patterns unique to ransomware behavior
+  rather than general memory allocation sequences.
 
 enabled: true
 
@@ -19,7 +19,7 @@ labels:
 tags:
   - ransomware
   - gamma
-  - memory-technique
+  - hybrid-detection
 
 references:
   - https://attack.mitre.org/techniques/T1486/
@@ -32,11 +32,14 @@ condition: >
       kevt.name = 'VirtualAlloc'
       and mem.type = 'PRIVATE'
       and mem.protection = 'READWRITE'
-      and mem.size <= 16384
-      and ps.parent.name = ps.name
-      and not ps.exe imatches (
-        '?:\\Windows\\*',
-        '?:\\Program Files*\\*'
+      and mem.alloc = 'COMMIT'
+      and ps.exe imatches '?:\\Users\\*'
+      and not ps.domain in (
+        'NT AUTHORITY',
+        'SYSTEM',
+        'NT VIRTUAL MACHINE',
+        'LOCAL SERVICE',
+        'NETWORK SERVICE'
       )
       and not (
         ps.name in (
@@ -44,30 +47,32 @@ condition: >
           'services.exe',
           'lsass.exe',
           'csrss.exe',
-          'System'
+          'System',
+          'vmmem'
         )
       )
     )|
     |(
-      kevt.name = 'VirtualAlloc' 
+      kevt.name = 'VirtualAlloc'
+      and mem.alloc icontains 'TOP_DOWN'
       and mem.type = 'PRIVATE'
-      and mem.protection = 'READWRITE'
-      and mem.size <= 16384
     )|
     |(
-      kevt.name = 'VirtualAlloc'
-      and mem.type = 'PRIVATE'
-      and mem.protection = 'READWRITE'
-      and mem.size >= 1048576
+      kevt.name = 'CreateFile'
+      and kevt.arg[share_mask] = 'READ|WRITE|DELETE'
+      and file.name imatches (
+        '?:\\Users\\*\\Documents\\*.*',
+        '?:\\Users\\*\\Desktop\\*.*',
+        '?:\\Users\\*\\Downloads\\*.*'
+      )
     )|
 
 output: |
-  Gamma memory initialization technique detected:
+  Gamma ransomware initialization detected:
   Process: %ps.name (PID %ps.pid)
   Parent Process: %ps.parent.name (PPID %ps.ppid)
-  Memory Type: %mem.type
-  Protection: %mem.protection
-  Path: %ps.exe
+  Memory Pattern: COMMIT + TOP_DOWN from user path
+  Initial Target: %file.name
 
 severity: critical
 
