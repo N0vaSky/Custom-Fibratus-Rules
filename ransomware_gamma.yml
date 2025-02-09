@@ -3,8 +3,8 @@ id: 9f7aab92-1234-4fcd-85ea-59692f447898
 version: 1.0.0
 description: |
   Detection based on Gamma's fundamental memory initialization technique.
-  Focuses on behavioral patterns that are core to its operation rather
-  than easily changeable indicators.
+  Focuses on the sequence of PRIVATE memory allocations it requires
+  during its initialization phase.
 
 enabled: true
 
@@ -32,6 +32,7 @@ condition: >
       kevt.name = 'VirtualAlloc'
       and mem.type = 'PRIVATE'
       and mem.protection = 'READWRITE'
+      and mem.size <= 16384
       and ps.parent.name = ps.name
       and not ps.exe imatches (
         '?:\\Windows\\*',
@@ -51,11 +52,13 @@ condition: >
       kevt.name = 'VirtualAlloc' 
       and mem.type = 'PRIVATE'
       and mem.protection = 'READWRITE'
+      and mem.size <= 16384
     )|
     |(
       kevt.name = 'VirtualAlloc'
       and mem.type = 'PRIVATE'
-      and mem.size > mem.size[1]
+      and mem.protection = 'READWRITE'
+      and mem.size >= 1048576
     )|
 
 output: |
