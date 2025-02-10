@@ -195,6 +195,7 @@ condition: >
     'smss.exe',
     'wininit.exe',
     'System',
+    'action1_agent.exe'
   )
     and
   not ps.parent.exe imatches
