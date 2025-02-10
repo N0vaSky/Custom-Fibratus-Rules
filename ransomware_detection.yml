@@ -52,7 +52,8 @@ condition: >
           'TrustedInstaller.exe',
           'RuntimeBroker.exe',
           'SearchIndexer.exe',
-          'spoolsv.exe'
+          'spoolsv.exe',
+          'mmc.exe'
         )
       )
       and not ps.exe imatches (
@@ -68,6 +69,11 @@ condition: >
           'winlogon.exe',
           'System'
         )
+      )
+      and not (
+        kevt.arg[cmdline] icontains '.msc'
+          or
+        kevt.arg[cmdline] icontains 'mmc.exe'
       )
     )|
     |(
