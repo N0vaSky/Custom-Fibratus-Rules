@@ -36,7 +36,7 @@ condition: >
         ps.name in (
           'svchost.exe',
           'services.exe',
-          'lsass.exe',
+          'lsass.exe', 
           'csrss.exe',
           'smss.exe',
           'wininit.exe',
@@ -50,14 +50,27 @@ condition: >
           'RuntimeBroker.exe',
           'backgroundTaskHost.exe',
           'conhost.exe',
-          'WmiPrvSE.exe'
+          'WmiPrvSE.exe',
+          'msedge.exe',
+          'chrome.exe',
+          'firefox.exe',
+          'brave.exe',
+          'opera.exe',
+          'iexplore.exe',
+          'ApplicationFrameHost.exe',
+          'Discord.exe',
+          'Spotify.exe'
         )
       )
       and not ps.exe imatches (
         '?:\\Windows\\System32\\*',
         '?:\\Windows\\explorer.exe',
         '?:\\Program Files\\Windows Defender\\*',
-        '?:\\Windows\\SysWOW64\\*'
+        '?:\\Windows\\SysWOW64\\*',
+        '?:\\Program Files*\\Microsoft\\Edge\\*',
+        '?:\\Program Files*\\Google\\Chrome\\*',
+        '?:\\Program Files*\\Mozilla Firefox\\*',
+        '?:\\Program Files*\\BraveSoftware\\*'
       )
       and not (
         ps.parent.name in (
