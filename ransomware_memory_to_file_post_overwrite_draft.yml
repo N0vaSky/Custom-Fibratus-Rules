@@ -1,4 +1,4 @@
-name: Memory-to-File Post-Overwrite (Cerber style)
+name: Ransomware In Progress - Memory-to-File Post-Overwrite
 id: 1e1350b5-4562-4515-b3bd-fcd7db52dd13
 version: 1.0.0
 description: Detects memory-to-file post-overwrite with optional rename/delete/create, typical of Cerber.
