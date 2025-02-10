@@ -1,4 +1,4 @@
-name: Memory-to-File Pre-Overwrite
+name: Ransomware In Progress - Memory-to-File Pre-Overwrite
 id: a72a98a9-d230-41e7-af68-c3e5105f3a2e
 version: 1.0.2
 description: Detects a file opened, then renamed, then overwritten. 
