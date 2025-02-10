@@ -62,6 +62,7 @@ condition: >
       and kevt.arg[file_name] iendswith '.exe'
       and not kevt.arg[file_name] imatches (
         '?:\\Program Files*',
+        '?:\\Windows\\*',
         '?:\\ProgramData\\*'
       )
     )|
