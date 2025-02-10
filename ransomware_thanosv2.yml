@@ -32,21 +32,20 @@ condition: >
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
       and file.view.protection = 'READONLY'
-      and not ps.exe matches (
-        'C:\\Windows\\explorer.exe',
-        'C:\\Windows\\System32\\*',
-        'C:\\Windows\\SysWOW64\\*',
-        'C:\\Windows\\WinSxS\\*',
-        'C:\\Program Files\\*',
-        'C:\\Program Files (x86)\\*',
-        'C:\\Windows\\SystemApps\\*'
-      )
       and not (
-        ps.parent.exe matches (
-          'C:\\Windows\\explorer.exe',
-          'C:\\Windows\\System32\\*',
-          'C:\\Windows\\SysWOW64\\*'
-        )
+        ps.exe matches 'C:\\Windows\\System32\\*'
+          or
+        ps.exe matches 'C:\\Windows\\SysWOW64\\*'
+          or
+        ps.exe matches 'C:\\Windows\\explorer.exe'
+          or
+        ps.exe matches 'C:\\Program Files\\*'
+          or
+        ps.parent.name in ('services.exe', 'svchost.exe')
+          or
+        kevt.arg[cmdline] contains '/Processid:'
+          or
+        kevt.arg[cmdline] icontains '-k DcomLaunch'
       )
     )|
     |(
