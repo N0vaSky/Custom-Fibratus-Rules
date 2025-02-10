@@ -32,46 +32,22 @@ condition: >
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
       and file.view.protection = 'READONLY'
-      and not ps.exe iendswith '\\explorer.exe'
-      and not (
-        ps.name in (
-          'svchost.exe',
-          'services.exe',
-          'lsass.exe',
-          'csrss.exe',
-          'smss.exe',
-          'wininit.exe',
-          'winlogon.exe',
-          'System',
-          'MsMpEng.exe',
-          'explorer.exe',
-          'dllhost.exe',
-          'SearchIndexer.exe',
-          'SearchProtocolHost.exe',
-          'RuntimeBroker.exe',
-          'backgroundTaskHost.exe',
-          'conhost.exe',
-          'WmiPrvSE.exe'
-        )
-      )
-      and not ps.exe imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\explorer.exe',
-        '?:\\Program Files\\Windows Defender\\*',
-        '?:\\Windows\\SysWOW64\\*'
+      and not ps.exe matches (
+        'C:\\Windows\\explorer.exe',
+        'C:\\Windows\\System32\\*',
+        'C:\\Windows\\SysWOW64\\*',
+        'C:\\Windows\\WinSxS\\*',
+        'C:\\Program Files\\*',
+        'C:\\Program Files (x86)\\*',
+        'C:\\Windows\\SystemApps\\*'
       )
       and not (
-        ps.parent.name in (
-          'services.exe',
-          'wininit.exe',
-          'lsass.exe',
-          'winlogon.exe',
-          'System',
-          'svchost.exe',
-          'explorer.exe'
+        ps.parent.exe matches (
+          'C:\\Windows\\explorer.exe',
+          'C:\\Windows\\System32\\*',
+          'C:\\Windows\\SysWOW64\\*'
         )
       )
-      and not kevt.arg[cmdline] contains '/Processid:'
     )|
     |(
       kevt.name = 'MapViewFile'
@@ -87,7 +63,6 @@ condition: >
         '?:\\Program Files*'
       )
     )|
-
 
 output: |
   Potential Thanos ransomware startup pattern detected:
