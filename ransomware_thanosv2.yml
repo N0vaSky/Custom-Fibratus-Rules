@@ -32,6 +32,7 @@ condition: >
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
       and file.view.protection = 'READONLY'
+      and not ps.exe iendswith '\\explorer.exe'
       and not (
         ps.name in (
           'svchost.exe',
