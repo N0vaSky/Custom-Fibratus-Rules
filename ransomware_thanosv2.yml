@@ -33,11 +33,13 @@ condition: >
       and file.view.type = 'PAGEFILE'
       and file.view.protection = 'READONLY'
       and not (
+        ps.name = 'explorer.exe'
+          or
+        ps.exe matches 'C:\\Windows\\explorer.exe'
+          or
         ps.exe matches 'C:\\Windows\\System32\\*'
           or
         ps.exe matches 'C:\\Windows\\SysWOW64\\*'
-          or
-        ps.exe matches 'C:\\Windows\\explorer.exe'
           or
         ps.exe matches 'C:\\Program Files\\*'
           or
@@ -62,7 +64,6 @@ condition: >
         '?:\\Program Files*'
       )
     )|
-
 output: |
   Potential Thanos ransomware startup pattern detected:
   Process: %ps.name (PID: %ps.pid)
