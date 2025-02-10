@@ -37,6 +37,8 @@ condition: >
           or
         ps.exe matches 'C:\\Windows\\explorer.exe'
           or
+        ps.exe icontains 'msedge.exe'
+          or
         ps.exe matches 'C:\\Windows\\System32\\*'
           or
         ps.exe matches 'C:\\Windows\\SysWOW64\\*'
