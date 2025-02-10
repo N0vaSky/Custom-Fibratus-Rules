@@ -1,10 +1,9 @@
-name: Thanos Ransomware Initial Pattern
+name: Thanos Ransomware Initial Memory Pattern
 id: 01a35edb-78c2-5a09-9d7c-2f18e145517c
 version: 2.0.0
 description: |
-  Detects Thanos ransomware through its distinctive pattern of repeated self-executable
-  mapping and file operations during initial startup, before encryption begins.
-  Enhanced pattern matching using correct field syntax and improved detection logic.
+  Detects Thanos ransomware through its distinctive sequential PAGEFILE mapping pattern
+  followed by characteristic file access sequence, before encryption begins.
 
 enabled: true
 
@@ -32,6 +31,7 @@ condition: >
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
+      and file.view.protection = 'READONLY'
       and not (
         ps.name in (
           'svchost.exe',
@@ -41,13 +41,8 @@ condition: >
           'smss.exe',
           'wininit.exe',
           'winlogon.exe',
-          'explorer.exe',
           'System',
-          'MsMpEng.exe',
-          'TrustedInstaller.exe',
-          'RuntimeBroker.exe',
-          'SearchIndexer.exe',
-          'spoolsv.exe'
+          'MsMpEng.exe'
         )
       )
       and not ps.exe imatches (
@@ -57,36 +52,22 @@ condition: >
       )
     )|
     |(
-      kevt.name = 'EnumDirectory'
-      and kevt.arg[directory] imatches (
-        'C:\\Users\\*\\Pictures\\*',
-        'C:\\Users\\*\\Documents\\*',
-        'C:\\Users\\*\\Desktop\\*'
-      )
-    )|
-    |(
-      kevt.name = 'CreateFile' 
-      and kevt.arg[create_disposition] = 'SUPERSEDE'
-      and kevt.arg[create_options] = 'NON_DIRECTORY_FILE|OPEN_REPARSE_POINT'
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and file.view.protection = 'READONLY'
     )|
     |(
       kevt.name = 'CreateFile'
-      and kevt.arg[create_options] = 'DIRECTORY_FILE|SYNCHRONOUS_IO_NONALERT'
-      and kevt.arg[status] = 'Success'
-    )|
-    |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'DATA'
-      and kevt.name = 'UnmapViewFile'
+      and kevt.arg[share_mask] = 'READ|DELETE'
+      and kevt.arg[file_name] iendswith '.exe'
     )|
 
 output: |
-  Potential Thanos ransomware behavior detected:
+  Potential Thanos ransomware startup pattern detected:
   Process: %ps.name (PID: %ps.pid)
   Command Line: %ps.cmdline
   Parent Process: %ps.parent.name (PPID: %ps.ppid)
   Executable Path: %ps.exe
-  Event: %kevt.name on %kevt.arg[file_name]
 
 severity: critical
 
