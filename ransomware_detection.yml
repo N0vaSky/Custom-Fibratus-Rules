@@ -53,13 +53,23 @@ condition: >
           'RuntimeBroker.exe',
           'SearchIndexer.exe',
           'spoolsv.exe',
-          'mmc.exe'
+          'mmc.exe',
+          'msiexec.exe',
+          'taskmgr.exe',
+          'perfmon.exe',
+          'wmiprvse.exe',
+          'wbem.exe',
+          'conhost.exe',
+          'dllhost.exe'
         )
       )
       and not ps.exe imatches (
         '?:\\Windows\\System32\\*',
         '?:\\Windows\\explorer.exe',
-        '?:\\Program Files\\Windows Defender\\*'
+        '?:\\Program Files\\Windows Defender\\*',
+        '?:\\Program Files\\Common Files\\*',
+        '?:\\Program Files (x86)\\Common Files\\*',
+        '?:\\Windows\\WinSxS\\*'
       )
       and not (
         ps.parent.name in (
@@ -67,13 +77,36 @@ condition: >
           'wininit.exe',
           'lsass.exe',
           'winlogon.exe',
-          'System'
+          'System',
+          'explorer.exe',
+          'svchost.exe'
         )
       )
       and not (
-        kevt.arg[cmdline] icontains '.msc'
+        ps.cmdline icontains '.msc'
           or
-        kevt.arg[cmdline] icontains 'mmc.exe'
+        ps.cmdline icontains 'mmc.exe'
+          or
+        ps.cmdline icontains '/s'
+          or
+        ps.cmdline icontains '-s'
+          or
+        ps.cmdline icontains 'eventvwr'
+          or
+        ps.cmdline icontains 'compmgmt'
+          or
+        ps.cmdline icontains 'taskschd'
+      )
+      and not (
+        ps.cwd imatches (
+          '?:\\Windows\\System32',
+          '?:\\Windows\\SysWOW64'
+        )
+      )
+      and not (
+        ps.domain icontains 'NT AUTHORITY'
+          or
+        ps.sid imatches 'S-1-5-18'
       )
     )|
     |(
