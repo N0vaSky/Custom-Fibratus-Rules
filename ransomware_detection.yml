@@ -165,7 +165,6 @@ condition: >
     )|
     |(
       (
-        # Final DLL Load Patterns
         kevt.name = 'MapViewFile'
         and file.view.type = 'IMAGE'
         and (
