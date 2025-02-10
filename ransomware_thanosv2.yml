@@ -32,58 +32,25 @@ condition: >
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
       and file.view.protection = 'READONLY'
-      and not (
-        ps.name in (
-          'svchost.exe',
-          'services.exe',
-          'lsass.exe', 
-          'csrss.exe',
-          'smss.exe',
-          'wininit.exe',
-          'winlogon.exe',
-          'System',
-          'MsMpEng.exe',
-          'explorer.exe',
-          'dllhost.exe',
-          'SearchIndexer.exe',
-          'SearchProtocolHost.exe',
-          'RuntimeBroker.exe',
-          'backgroundTaskHost.exe',
-          'conhost.exe',
-          'WmiPrvSE.exe',
-          'msedge.exe',
-          'chrome.exe',
-          'firefox.exe',
-          'brave.exe',
-          'opera.exe',
-          'iexplore.exe',
-          'ApplicationFrameHost.exe',
-          'Discord.exe',
-          'Spotify.exe'
-        )
-      )
       and not ps.exe imatches (
         '?:\\Windows\\System32\\*',
-        '?:\\Windows\\explorer.exe',
-        '?:\\Program Files\\Windows Defender\\*',
         '?:\\Windows\\SysWOW64\\*',
-        '?:\\Program Files*\\Microsoft\\Edge\\*',
-        '?:\\Program Files*\\Google\\Chrome\\*',
-        '?:\\Program Files*\\Mozilla Firefox\\*',
-        '?:\\Program Files*\\BraveSoftware\\*'
+        '?:\\Windows\\explorer.exe',
+        '?:\\Windows\\Microsoft.NET\\*',
+        '?:\\Program Files\\*',
+        '?:\\Program Files (x86)\\*',
+        '?:\\ProgramData\\*',
+        '?:\\Windows\\ServiceProfiles\\*',
+        '?:\\Windows\\WinSxS\\*'
       )
       and not (
-        ps.parent.name in (
-          'services.exe',
-          'wininit.exe',
-          'lsass.exe',
-          'winlogon.exe',
-          'System',
-          'svchost.exe',
-          'explorer.exe'
+        ps.parent.exe imatches (
+          '?:\\Windows\\System32\\*',
+          '?:\\Windows\\SysWOW64\\*',
+          '?:\\Program Files\\*',
+          '?:\\Program Files (x86)\\*'
         )
       )
-      and not kevt.arg[cmdline] contains '/Processid:'
     )|
     |(
       kevt.name = 'MapViewFile'
@@ -96,9 +63,11 @@ condition: >
       and kevt.arg[file_name] iendswith '.exe'
       and not kevt.arg[file_name] imatches (
         '?:\\Windows\\*',
-        '?:\\Program Files*'
+        '?:\\Program Files*',
+        '?:\\ProgramData\\*'
       )
     )|
+
 
 output: |
   Potential Thanos ransomware startup pattern detected:
