@@ -142,6 +142,7 @@ condition: >
       '>& /dev/null',
       'mkfifo',
       'mknod',
+      'msfvenom',
       'pipe',
       'AF_INET',
       'subprocess',
@@ -183,7 +184,8 @@ condition: >
       'lua -e',
       'php -r',
       'mkfifo',
-      'mknod'
+      'mknod',
+      'msfvenom'
     )
   )
     and
