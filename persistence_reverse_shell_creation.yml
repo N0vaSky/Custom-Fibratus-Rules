@@ -195,13 +195,13 @@ condition: >
     'smss.exe',
     'wininit.exe',
     'System',
-    'action1agent.exe'
   )
     and
   not ps.parent.exe imatches
   (
     '?:\\Windows\\WinSxS\\*',
-    '?:\\Program Files\\Windows Defender\\*'
+    '?:\\Program Files\\Windows Defender\\*',
+    '?:\\WINDOWS\\Action1\\action1_agent.exe'
   )
 
 output: |
