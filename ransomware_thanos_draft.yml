@@ -1,0 +1,101 @@
+name: Thanos Ransomware Initial Memory Pattern
+id: 01a45edb-78c2-4a39-9d7c-2f19e384517c
+version: 1.0.0
+description: |
+  Detects Thanos ransomware through its distinctive pattern of repeated self-executable
+  mapping and file operations during initial startup, before encryption begins.
+  Excludes known system processes to prevent disruption.
+
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - thanos
+  - early-detection
+  - memory-patterns
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence
+    maxspan 50ms
+    by ps.uuid
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and not (
+        ps.name in (
+          'svchost.exe',
+          'services.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'smss.exe',
+          'wininit.exe',
+          'winlogon.exe',
+          'explorer.exe',
+          'System',
+          'MsMpEng.exe',
+          'TrustedInstaller.exe',
+          'RuntimeBroker.exe',
+          'SearchIndexer.exe',
+          'spoolsv.exe'
+        )
+      )
+      and not ps.exe imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\explorer.exe',
+        '?:\\Program Files\\Windows Defender\\*'
+      )
+      and not (
+        ps.parent.name in (
+          'services.exe',
+          'wininit.exe',
+          'lsass.exe',
+          'winlogon.exe',
+          'System'
+        )
+      )
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and kevt.arg[share_mask] = 'READ|DELETE'
+      and kevt.arg[file_name] iendswith '.exe'
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'DATA'
+      and file.view.size = 90112
+    )|
+    |(
+      kevt.name = 'UnmapViewFile'
+      and file.view.type = 'DATA'
+      and file.view.size = 90112
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and kevt.arg[share_mask] = 'READ'
+      and kevt.arg[file_name] iendswith '.exe'
+    )|
+
+output: |
+  Potential Thanos ransomware startup pattern detected:
+  Process: %ps.name (PID: %ps.pid)
+  Command Line: %ps.cmdline
+  Parent Process: %ps.parent.name (PPID: %ps.ppid)
+  Executable Path: %ps.exe
+
+severity: critical
+
+action:
+  - name: kill
+
+min-engine-version: 2.0.0

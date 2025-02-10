@@ -1,0 +1,81 @@
+name: Thanos Ransomware Initial Memory Pattern v2
+id: 01a35edb-78c2-5a09-9d7c-2f18e145517c
+version: 2.0.0
+description: |
+  Detects Thanos ransomware through its distinctive sequential PAGEFILE mapping pattern
+  followed by characteristic file access sequence, before encryption begins.
+
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - thanos
+  - early-detection
+  - memory-patterns
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence
+    maxspan 30ms
+    by ps.uuid
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and file.view.protection = 'READONLY'
+      and not (
+        ps.name = 'explorer.exe'
+          or
+        ps.exe matches 'C:\\Windows\\explorer.exe'
+          or
+        ps.exe imatches 'msedge.exe'
+          or
+        ps.exe matches 'C:\\Windows\\System32\\*'
+          or
+        ps.exe matches 'C:\\Windows\\SysWOW64\\*'
+          or
+        ps.exe matches 'C:\\Program Files\\*'
+          or
+        ps.parent.name in ('services.exe', 'svchost.exe')
+          or
+        kevt.arg[cmdline] contains '/Processid:'
+          or
+        kevt.arg[cmdline] icontains '-k DcomLaunch'
+      )
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+      and file.view.type = 'PAGEFILE'
+      and file.view.protection = 'READONLY'
+    )|
+    |(
+      kevt.name = 'CreateFile'
+      and kevt.arg[share_mask] = 'READ|DELETE'
+      and kevt.arg[file_name] iendswith '.exe'
+      and not kevt.arg[file_name] imatches (
+        '?:\\Windows\\*',
+        '?:\\Program Files*'
+      )
+    )|
+output: |
+  Potential Thanos ransomware startup pattern detected:
+  Process: %ps.name (PID: %ps.pid)
+  Command Line: %ps.cmdline
+  Parent Process: %ps.parent.name (PPID: %ps.ppid)
+  Executable Path: %ps.exe
+
+severity: critical
+
+action:
+  - name: kill
+
+min-engine-version: 2.0.0
