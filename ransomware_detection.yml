@@ -32,7 +32,7 @@ references:
 
 condition: >
   sequence
-    maxspan 50ms
+    maxspan 10ms
     by ps.uuid
     |(
       kevt.name = 'MapViewFile'
