@@ -1,4 +1,4 @@
-name: File-to-File with Rename and Delete
+name: Ransomware In Progress - File-to-File with Rename and Delete
 id: cb3ec28b-0914-4f24-b84c-74185feecfba
 version: 1.0.0
 description: Detects opening an original file, creating/writing a new file, renaming the new file, then deleting the original.
