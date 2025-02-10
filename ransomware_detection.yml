@@ -1,10 +1,14 @@
-name: Generic Ransomware Detection Pattern
-id: 845e2f1a-6f3d-42a1-9d3c-e148e5c88c2d
-version: 4.0.0
+You make an excellent point. I'll revise the rule to better capture the distinct file I/O patterns from each ransomware variant using OR statements within our sequence. This will provide more comprehensive coverage while maintaining detection accuracy.
+
+```yaml
+name: Comprehensive Multi-Variant Ransomware Detection
+id: 9d31e8b9-7e4a-4b5d-9c8e-f256871bc432
+version: 1.0.0
 description: |
-  Generic ransomware detection rule based on successful early-stage detection patterns.
-  Focuses on fundamental behaviors common across ransomware variants while maintaining
-  system stability through careful process exclusions.
+  Advanced ransomware detection rule that combines distinct file I/O patterns
+  from multiple ransomware families including WannaCry, Thanos, Vipasana,
+  Gamma, and Hive. Each variant's unique behavioral sequence is preserved
+  while maintaining strict process exclusions for system stability.
 
 enabled: true
 
@@ -20,13 +24,18 @@ tags:
   - ransomware
   - early-detection
   - generic-detection
+  - wannacry
+  - thanos
+  - vipasana
+  - gamma
+  - hive
 
 references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
   sequence
-    maxspan 20ms
+    maxspan 50ms
     by ps.uuid
     |(
       kevt.name = 'MapViewFile'
@@ -42,36 +51,138 @@ condition: >
           'winlogon.exe',
           'explorer.exe',
           'System',
-          'MsMpEng.exe'
+          'MsMpEng.exe',
+          'TrustedInstaller.exe',
+          'RuntimeBroker.exe',
+          'SearchIndexer.exe',
+          'spoolsv.exe'
         )
       )
       and not ps.exe imatches (
         '?:\\Windows\\System32\\*',
-        '?:\\Windows\\explorer.exe'
+        '?:\\Windows\\explorer.exe',
+        '?:\\Program Files\\Windows Defender\\*'
+      )
+      and not (
+        ps.parent.name in (
+          'services.exe',
+          'wininit.exe',
+          'lsass.exe',
+          'winlogon.exe',
+          'System'
+        )
       )
     )|
     |(
-      kevt.name = 'CreateFile'
-      and file.name imatches 'C:\\Windows'
-      and kevt.arg[type] = 'Directory'
-    )|
-    |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'IMAGE'
-      and file.name imatches (
-        'C:\\Windows\\System32\\*.dll',
-        'C:\\Windows\\SysWOW64\\*.dll'
+      (
+        (
+          kevt.name = 'MapViewFile'
+          and file.view.type = 'PAGEFILE'
+          and file.view.size = 16384
+        )
+          or
+        (
+          kevt.name = 'CreateFile'
+          and kevt.arg[share_mask] = 'READ|DELETE'
+          and kevt.arg[file_name] iendswith '.exe'
+        )
+          or
+        (
+          kevt.name = 'CreateFile'
+          and file.name imatches 'C:\\Users\\*\\AppData\\Local\\Temp\\_MEI*\\*'
+          and (
+            file.name contains ('api-ms-win-core-')
+            or file.name contains ('api-ms-win-crt-')
+            or file.name iin (
+              'ucrtbase.dll',
+              'VCRUNTIME140.dll',
+              'libssl-1_1.dll',
+              'libcrypto-1_1.dll',
+              'python37.dll'
+            )
+          )
+        )
+          or
+        (
+          kevt.name = 'CreateFile'
+          and kevt.arg[create_options] icontains 'DIRECTORY_FILE'
+          and file.name imatches 'C:\\Windows'
+        )
+          or
+        (
+          kevt.name = 'CreateFile'
+          and file.name imatches 'C:\\Windows'
+          and kevt.arg[type] = 'Directory'
+        )
       )
     )|
     |(
-      kevt.name = 'CreateFile'
-      and file.name imatches 'C:\\Users\\*\\Desktop\\'
-      and kevt.arg[type] = 'Directory'
+      (
+        (
+          kevt.name = 'MapViewFile'
+          and file.view.type = 'IMAGE'
+          and file.name imatches (
+            'C:\\Windows\\System32\\wow64*.dll',
+            'C:\\Windows\\SysWOW64\\*.dll'
+          )
+        )
+          or
+        (
+          kevt.name = 'MapViewFile'
+          and file.view.type = 'DATA'
+          and file.view.size = 90112
+        )
+          or
+        (
+          kevt.name = 'MapViewFile'
+          and file.view.type = 'IMAGE'
+          and file.name imatches '*\\wow64.dll'
+        )
+          or
+        (
+          kevt.name = 'MapViewFile'
+          and file.view.type = 'IMAGE'
+          and file.name imatches 'C:\\Windows\\System32\\*.dll'
+        )
+      )
     )|
     |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'IMAGE'
-      and file.name imatches 'C:\\Windows\\*\\*.dll'
+      (
+        (
+          kevt.name = 'UnmapViewFile'
+          and file.view.type = 'DATA'
+          and file.view.size = 90112
+        )
+          or
+        (
+          kevt.name = 'EnumDirectory'
+          and kevt.arg[directory] imatches 'C:\\Windows\\System32'
+        )
+          or
+        (
+          kevt.name = 'CreateFile'
+          and file.name imatches 'C:\\Users\\*\\Desktop\\'
+          and kevt.arg[type] = 'Directory'
+        )
+      )
+    )|
+    |(
+      (
+        # Final DLL Load Patterns
+        kevt.name = 'MapViewFile'
+        and file.view.type = 'IMAGE'
+        and (
+          file.name imatches 'C:\\Windows\\*\\*.dll'
+            or
+          (
+            file.name imatches (
+              'C:\\Windows\\System32\\*.dll',
+              'C:\\Windows\\SysWOW64\\*.dll'
+            )
+            and kevt.arg[protection] = 'EXECUTE_READWRITE|READONLY'
+          )
+        )
+      )
     )|
 
 output: |
@@ -79,6 +190,7 @@ output: |
   Process: %ps.name (PID %ps.pid)
   Image Path: %ps.exe
   Parent Process: %ps.parent.name (PPID %ps.ppid)
+  Command Line: %ps.cmdline
   Initial Events: %kevt.name on %file.name
 
 severity: critical
