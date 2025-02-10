@@ -1,4 +1,4 @@
-name: File-to-File with Delete
+name: Ransomware In Progress - File-to-File with Delete
 id: bd306ce2-03e8-46f8-9bf4-841c33b60056
 version: 1.0.0
 description: Detects reading an original file, creating/writing a new file, then deleting the original.
