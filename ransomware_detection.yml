@@ -37,76 +37,35 @@ condition: >
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
-      and not (
-        ps.name in (
-          'svchost.exe',
-          'services.exe',
-          'lsass.exe',
-          'csrss.exe',
-          'smss.exe',
-          'wininit.exe',
-          'winlogon.exe',
-          'explorer.exe',
-          'System',
-          'MsMpEng.exe',
-          'TrustedInstaller.exe',
-          'RuntimeBroker.exe',
-          'SearchIndexer.exe',
-          'spoolsv.exe',
-          'mmc.exe',
-          'msiexec.exe',
-          'taskmgr.exe',
-          'perfmon.exe',
-          'wmiprvse.exe',
-          'wbem.exe',
-          'conhost.exe',
-          'dllhost.exe'
-        )
-      )
       and not ps.exe imatches (
         '?:\\Windows\\System32\\*',
+        '?:\\Windows\\SysWOW64\\*',
         '?:\\Windows\\explorer.exe',
-        '?:\\Program Files\\Windows Defender\\*',
-        '?:\\Program Files\\Common Files\\*',
-        '?:\\Program Files (x86)\\Common Files\\*',
-        '?:\\Windows\\WinSxS\\*'
+        '?:\\Windows\\WinSxS\\*',
+        '?:\\Program Files\\*',
+        '?:\\Program Files (x86)\\*',
+        '?:\\Windows\\servicing\\*',
+        '?:\\Windows\\Microsoft.NET\\*',
+        '?:\\Windows\\assembly\\*',
+        '?:\\ProgramData\\Microsoft\\*',
+        '?:\\Windows\\ImmersiveControlPanel\\*',
+        '?:\\Windows\\diagnostics\\*',
+        '?:\\Windows\\CCM\\*',
+        '?:\\Windows\\AppPatch\\*',
+        '?:\\Windows\\InfusedApps\\*'
       )
-      and not (
-        ps.parent.name in (
-          'services.exe',
-          'wininit.exe',
-          'lsass.exe',
-          'winlogon.exe',
-          'System',
-          'explorer.exe',
-          'svchost.exe'
-        )
+      and not ps.parent.exe imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\SysWOW64\\*',
+        '?:\\Windows\\explorer.exe',
+        '?:\\Program Files\\*',
+        '?:\\Program Files (x86)\\*'
       )
-      and not (
-        ps.cmdline icontains '.msc'
-          or
-        ps.cmdline icontains 'mmc.exe'
-          or
-        ps.cmdline icontains '/s'
-          or
-        ps.cmdline icontains '-s'
-          or
-        ps.cmdline icontains 'eventvwr'
-          or
-        ps.cmdline icontains 'compmgmt'
-          or
-        ps.cmdline icontains 'taskschd'
-      )
-      and not (
-        ps.cwd imatches (
-          '?:\\Windows\\System32',
-          '?:\\Windows\\SysWOW64'
-        )
-      )
-      and not (
-        ps.domain icontains 'NT AUTHORITY'
-          or
-        ps.sid imatches 'S-1-5-18'
+      and not ps.cwd imatches (
+        '?:\\Windows\\*',
+        '?:\\Program Files\\*',
+        '?:\\Program Files (x86)\\*',
+        '?:\\ProgramData\\*'
       )
     )|
     |(
