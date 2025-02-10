@@ -1,4 +1,4 @@
-name: Thanos Ransomware Initial Memory Pattern
+name: Thanos Ransomware Initial Memory Pattern v2
 id: 01a35edb-78c2-5a09-9d7c-2f18e145517c
 version: 2.0.0
 description: |
@@ -42,14 +42,35 @@ condition: >
           'wininit.exe',
           'winlogon.exe',
           'System',
-          'MsMpEng.exe'
+          'MsMpEng.exe',
+          'explorer.exe',
+          'dllhost.exe',
+          'SearchIndexer.exe',
+          'SearchProtocolHost.exe',
+          'RuntimeBroker.exe',
+          'backgroundTaskHost.exe',
+          'conhost.exe',
+          'WmiPrvSE.exe'
         )
       )
       and not ps.exe imatches (
         '?:\\Windows\\System32\\*',
         '?:\\Windows\\explorer.exe',
-        '?:\\Program Files\\Windows Defender\\*'
+        '?:\\Program Files\\Windows Defender\\*',
+        '?:\\Windows\\SysWOW64\\*'
       )
+      and not (
+        ps.parent.name in (
+          'services.exe',
+          'wininit.exe',
+          'lsass.exe',
+          'winlogon.exe',
+          'System',
+          'svchost.exe',
+          'explorer.exe'
+        )
+      )
+      and not kevt.arg[cmdline] contains '/Processid:'
     )|
     |(
       kevt.name = 'MapViewFile'
@@ -60,6 +81,10 @@ condition: >
       kevt.name = 'CreateFile'
       and kevt.arg[share_mask] = 'READ|DELETE'
       and kevt.arg[file_name] iendswith '.exe'
+      and not kevt.arg[file_name] imatches (
+        '?:\\Windows\\*',
+        '?:\\Program Files*'
+      )
     )|
 
 output: |
