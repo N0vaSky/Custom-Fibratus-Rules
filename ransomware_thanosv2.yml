@@ -39,7 +39,6 @@ condition: >
         '?:\\Windows\\Microsoft.NET\\*',
         '?:\\Program Files\\*',
         '?:\\Program Files (x86)\\*',
-        '?:\\ProgramData\\*',
         '?:\\Windows\\ServiceProfiles\\*',
         '?:\\Windows\\WinSxS\\*'
       )
@@ -62,7 +61,6 @@ condition: >
       and kevt.arg[share_mask] = 'READ|DELETE'
       and kevt.arg[file_name] iendswith '.exe'
       and not kevt.arg[file_name] imatches (
-        '?:\\Windows\\*',
         '?:\\Program Files*',
         '?:\\ProgramData\\*'
       )
