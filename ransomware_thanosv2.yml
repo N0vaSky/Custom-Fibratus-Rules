@@ -32,24 +32,28 @@ condition: >
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
       and file.view.protection = 'READONLY'
+      and not ps.exe iendswith '\\explorer.exe'
       and not ps.exe imatches (
         '?:\\Windows\\System32\\*',
-        '?:\\Windows\\SysWOW64\\*',
         '?:\\Windows\\explorer.exe',
+        '?:\\Program Files\\Windows Defender\\*',
+        '?:\\Windows\\SysWOW64\\*',
         '?:\\Windows\\Microsoft.NET\\*',
         '?:\\Program Files\\*',
-        '?:\\Program Files (x86)\\*',
-        '?:\\Windows\\ServiceProfiles\\*',
-        '?:\\Windows\\WinSxS\\*'
+        '?:\\Program Files (x86)\\*'
       )
       and not (
-        ps.parent.exe imatches (
-          '?:\\Windows\\System32\\*',
-          '?:\\Windows\\SysWOW64\\*',
-          '?:\\Program Files\\*',
-          '?:\\Program Files (x86)\\*'
+        ps.parent.name in (
+          'services.exe',
+          'wininit.exe',
+          'lsass.exe',
+          'winlogon.exe',
+          'System',
+          'svchost.exe',
+          'explorer.exe'
         )
       )
+      and not kevt.arg[cmdline] contains '/Processid:'
     )|
     |(
       kevt.name = 'MapViewFile'
@@ -61,9 +65,8 @@ condition: >
       and kevt.arg[share_mask] = 'READ|DELETE'
       and kevt.arg[file_name] iendswith '.exe'
       and not kevt.arg[file_name] imatches (
-        '?:\\Program Files*',
         '?:\\Windows\\*',
-        '?:\\ProgramData\\*'
+        '?:\\Program Files*'
       )
     )|
 
