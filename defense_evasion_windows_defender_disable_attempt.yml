@@ -22,32 +22,63 @@ references:
 
 condition: >
   (
-    kevt.name in ('RegSetValue', 'RegDeleteValue')
-    and (
-      registry.key.name contains 'Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
-      or registry.key.name contains 'Windows Defender\\DisableAntiSpyware'
-      or registry.key.name contains 'Windows Defender\\DisableBehaviorMonitoring'
+    (
+      kevt.name = 'RegSetValue'
+      and ps.name = 'MsMpEng.exe'
+      and (
+        registry.key.name = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
+        or registry.key.name = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Reporting\\LastRtpTurnedOffTime'
+      )
+      and (
+        registry.value = 1
+      )
     )
-    and registry.value = 1
   )
   or
   (
     kevt.name = 'CreateProcess'
-    and ps.name in ('sc.exe', 'wmic.exe', 'powershell.exe', 'cmd.exe')
+    and ps.name in ('wmiprvse.exe', 'mofcomp.exe')
     and (
-      kevt.arg[cmdline] contains 'stop WinDefend'
-      or kevt.arg[cmdline] contains 'stop Sense'
-      or kevt.arg[cmdline] contains 'stop WdNisSvc'
-      or kevt.arg[cmdline] contains 'config WinDefend start= disabled'
-      or kevt.arg[cmdline] contains 'config Sense start= disabled'
-      or kevt.arg[cmdline] contains 'config WdNisSvc start= disabled'
+      kevt.arg[cmdline] icontains 'DisableRealtimeMonitoring'
+      or kevt.arg[cmdline] icontains 'Disable Real-Time Protection'
     )
   )
+  or
+  (
+    kevt.name = 'CreateProcess'
+    and (
+      ps.name in ('SecurityHealthService.exe', 'SecurityHealthHost.exe')
+      or ps.exe imatches '*SecurityHealthService*'
+      or ps.exe imatches '*SecurityHealthHost*'
+    )
+    and (
+    kevt.arg[cmdline] icontains 'Disable Protection'
+    )
+  )
+  or
+  (
+    kevt.name = 'CreateProcess'
+    and ps.name in ('sc.exe', 'net.exe')
+    and (
+      kevt.arg[cmdline] icontains 'WinDefend'
+      or kevt.arg[cmdline] icontains 'Windows Defender'
+    )
+    and (
+      kevt.arg[cmdline] icontains 'stop'
+      or kevt.arg[cmdline] icontains 'disable'
+    )
+  )
+
 output: >
   **Windows Defender Tampering Detected!**
   - **Process:** %ps.name (PID: %ps.pid)
   - **Command Line:** %kevt.arg[cmdline]
   - **Registry Key Modified:** %registry.key.name
-  - **Defender Service Status Change Detected**
   - **Potential Defense Evasion Activity Detected**
+
+severity: critical
+
+action:
+  - name: kill
+
 min-engine-version: 2.0.0
