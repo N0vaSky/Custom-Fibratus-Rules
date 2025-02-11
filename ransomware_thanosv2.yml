@@ -25,31 +25,59 @@ references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
-  kevt.name = 'LoadImage'
-    and
-  image.is_exec = true
-    and
-  image.signature.type = 'NONE'
-    and
-  image.signature.level = 'UNCHECKED'
-    and
-  not ps.exe imatches
-    (
-      '?:\\Windows\\*',
-      '?:\\Program Files*',
-      '?:\\ProgramData\\*'
-    )
-    and
-  not ps.name in
-    (
-      'svchost.exe',
-      'services.exe',
-      'lsass.exe',
-      'csrss.exe',
-      'smss.exe',
-      'wininit.exe',
-      'System'
-    )
+  sequence
+    maxspan 50ms
+    by ps.uuid
+    |(
+      kevt.name = 'LoadImage'
+        and
+      image.is_exec = true
+        and
+      image.signature.type = 'NONE'
+        and
+      image.signature.level = 'UNCHECKED'
+        and
+      not ps.exe imatches
+        (
+          '?:\\Windows\\*',
+          '?:\\Program Files*',
+          '?:\\ProgramData\\*',
+          '?:\\Users\\*\\AppData\\Local\\Programs\\*',
+          '?:\\Users\\*\\AppData\\Local\\Temp\\*'
+        )
+        and
+      not ps.name in
+        (
+          'svchost.exe',
+          'services.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'smss.exe',
+          'wininit.exe',
+          'System'
+        )
+    )|
+    |(
+      kevt.name = 'CreateFile'
+        and
+      kevt.arg[type] = 'Directory'
+        and
+      kevt.arg[share_mask] = 'READ|WRITE'
+        and
+      file.name imatches
+        (
+          '?:\\Users\\*\\Documents\\*',
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Pictures\\*'
+        )
+    )|
+    |(
+      kevt.name = 'MapViewFile'
+        and
+      file.view.type = 'PAGEFILE'
+        and
+      file.view.protection = 'READONLY'
+    )|
 
 output: |
   Potential Thanos ransomware startup pattern detected:
