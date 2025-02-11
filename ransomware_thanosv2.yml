@@ -26,24 +26,22 @@ references:
 
 condition: >
   sequence
-    maxspan 5ms
-    by ps.uuid
-    |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'PAGEFILE'
-      and file.view.protection = 'READONLY'
-      and not ps.name in ('System', 'smss.exe', 'csrss.exe')
-    )|
-    |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'PAGEFILE'
-      and file.view.protection = 'READONLY'
-    )|
-    |(
-      kevt.name = 'LoadImage'
-      and image.is_exec = true
-      and image.signature.type = 'NONE'
-    )|
+    maxspan 2ms
+    |kevt.name = 'MapViewFile'
+      and
+    file.view.type = 'PAGEFILE'
+      and
+    kevt.pid != 4|
+    |kevt.name = 'MapViewFile'
+      and
+    file.view.type = 'PAGEFILE'|
+    |kevt.name = 'LoadImage'
+      and
+    image.signature.type = 'NONE'
+      and
+    image.signature.level = 'UNCHECKED'
+      and
+    image.is_exec = true|
 
 output: |
   Potential Thanos ransomware startup pattern detected:
