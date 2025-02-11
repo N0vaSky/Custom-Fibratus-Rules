@@ -21,49 +21,11 @@ references:
   - "https://attack.mitre.org/techniques/T1562/001/"
 
 condition: >
-  (
-    (
-      kevt.name = 'RegSetValue'
-      and ps.name = 'MsMpEng.exe'
-      and (
-        registry.key.name = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
-      )
+  kevt.name = 'RegSetValue'
+  and ps.name = 'MsMpEng.exe'
+  and (
+    registry.key.name = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
     )
-  )
-  or
-  (
-    kevt.name = 'CreateProcess'
-    and ps.name in ('wmiprvse.exe', 'mofcomp.exe')
-    and (
-      kevt.arg[cmdline] icontains 'DisableRealtimeMonitoring'
-      or kevt.arg[cmdline] icontains 'Disable Real-Time Protection'
-    )
-  )
-  or
-  (
-    kevt.name = 'CreateProcess'
-    and (
-      ps.name in ('SecurityHealthService.exe', 'SecurityHealthHost.exe')
-      or ps.exe imatches '*SecurityHealthService*'
-      or ps.exe imatches '*SecurityHealthHost*'
-    )
-    and (
-    kevt.arg[cmdline] icontains 'Disable Protection'
-    )
-  )
-  or
-  (
-    kevt.name = 'CreateProcess'
-    and ps.name in ('sc.exe', 'net.exe')
-    and (
-      kevt.arg[cmdline] icontains 'WinDefend'
-      or kevt.arg[cmdline] icontains 'Windows Defender'
-    )
-    and (
-      kevt.arg[cmdline] icontains 'stop'
-      or kevt.arg[cmdline] icontains 'disable'
-    )
-  )
 
 output: >
   **Windows Defender Tampering Detected! : If value = 1 then Defender is Disabled.**
