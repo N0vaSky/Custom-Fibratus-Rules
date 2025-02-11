@@ -60,7 +60,8 @@ condition: >
           'lsass.exe',
           'winlogon.exe',
           'System',
-          'explorer.exe'
+          'explorer.exe',
+          'svchost.exe'
         )
         or ps.sid = 'S-1-5-18'
         or kevt.arg[cmdline] icontains (
