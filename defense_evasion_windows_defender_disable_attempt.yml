@@ -26,8 +26,8 @@ condition: >
       kevt.name = 'RegSetValue'
       and ps.name = 'MsMpEng.exe'
       and (
-        registry.key.name = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
-        or registry.key.name = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Reporting\\LastRtpTurnedOffTime'
+        registry.key.name imatches '*\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
+        or registry.key.name imatches '*\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Reporting\\LastRtpTurnedOffTime'
       )
       and (
         registry.value = 1
