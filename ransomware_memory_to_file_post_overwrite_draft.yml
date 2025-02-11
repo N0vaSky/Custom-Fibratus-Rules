@@ -89,7 +89,7 @@ condition: >
     )|
 
 output: |
-  Possible Cerber memory-to-file post-overwrite by %ps.name on %file.name:
+  Memory-To-File Post-Overwrite by %ps.name on %file.name:
   open/read/write twice, then rename/delete/create.
 
 severity: critical
