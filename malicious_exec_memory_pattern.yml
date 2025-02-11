@@ -59,7 +59,8 @@ condition: >
           'wininit.exe',
           'lsass.exe',
           'winlogon.exe',
-          'System'
+          'System',
+          'explorer.exe'
         )
         or ps.sid = 'S-1-5-18'
         or kevt.arg[cmdline] icontains (
@@ -69,12 +70,6 @@ condition: >
           '-Embedding'
         )
       )
-        and not file.name imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\SysWOW64\\*',
-        '?:\\Program Files\\*',
-        '?:\\ProgramData\\*'
-        )
     )|
     |(
       kevt.name = 'CreateFile'
