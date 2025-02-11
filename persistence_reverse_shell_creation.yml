@@ -138,14 +138,12 @@ condition: >
       'eval(',
       'assert(',
       '>& /dev/null',
-      'mkfifo',
       'mknod',
       'pipe',
       'AF_INET',
       'subprocess',
       'pty.spawn',
       'PTY.spawn',
-      'dup2(',
       '.connect(',
       '.bind(',
       '.listen(',
@@ -179,7 +177,6 @@ condition: >
       'lua -e',
       'php -r',
       'msfvenom',
-      'mkfifo',
       'mknod'
     )
   )
