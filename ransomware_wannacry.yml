@@ -1,4 +1,4 @@
-name: Ransomware Process Detected
+name: Ransomware or Malware Process Detected (Generic)
 id: 7f31d8b9-4e2a-4b5d-9c8e-f256871bc432
 version: 1.1.0
 description: |
@@ -71,7 +71,7 @@ condition: >
     )|
 
 output: |
-  Ransomware startup pattern detected:
+  Potential Ransomware or Malware process detected:
   Process: %ps.name (PID %ps.pid)
   Image Path: %ps.exe
   Parent Process: %ps.parent.name (PPID %ps.ppid)
