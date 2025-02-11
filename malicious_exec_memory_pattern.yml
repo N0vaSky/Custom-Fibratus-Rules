@@ -60,6 +60,10 @@ condition: >
           'lsass.exe',
           'winlogon.exe',
           'System',
+          'MsMpEng.exe',
+          'TrustedInstaller.exe',
+          'RuntimeBroker.exe',
+          'SearchIndexer.exe',
           'explorer.exe',
           'svchost.exe'
         )
