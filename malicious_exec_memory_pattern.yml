@@ -32,76 +32,84 @@ condition: >
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
-      and (
-        not ps.name = 'explorer.exe'
-        and not ps.name in (
-          'svchost.exe',
-          'services.exe',
-          'lsass.exe',
-          'csrss.exe',
-          'smss.exe',
-          'wininit.exe',
-          'winlogon.exe',
-          'System',
-          'MsMpEng.exe',
-          'TrustedInstaller.exe',
-          'RuntimeBroker.exe',
-          'SearchIndexer.exe',
-          'spoolsv.exe'
-        )
-        and not ps.exe imatches (
-          '?:\\Windows\\System32\\*',
-          '?:\\Windows\\explorer.exe',
-          '?:\\Program Files\\Windows Defender\\*',
-          '?:\\Program Files\\*',
-          '?:\\Program Files (x86)\\*',
-          '?:\\Users\\*\\AppData\\Local\\Programs\\*'
-        )
-        and not ps.parent.name in (
-          'services.exe',
-          'wininit.exe',
-          'lsass.exe',
-          'winlogon.exe',
-          'System',
-          'explorer.exe'
-        )
-        and not ps.sid = 'S-1-5-18'
-        and not pe.is_signed
-        and not kevt.arg[cmdline] icontains (
-          '-k netsvcs',
-          '-k DcomLaunch',
-          'RuntimeBroker',
-          '-Embedding',
-          '--start-in-tray'
-        )
+      and not ps.exe imatches '?:\\Windows\\System32\\*'
+      and not ps.exe imatches '?:\\Windows\\SysWOW64\\*'
+      and not ps.exe imatches '?:\\Program Files\\*'
+      and not ps.exe imatches '?:\\Program Files (x86)\\*'
+      and not ps.sid = 'S-1-5-18'
+      and not ps.parent.exe imatches '?:\\Windows\\System32\\*'
+      and not ps.parent.exe imatches '?:\\Program Files\\*'
+      and not ps.parent.exe imatches '?:\\Program Files (x86)\\*'
+      and not ps.parent.name in (
+        'services.exe',
+        'wininit.exe',
+        'lsass.exe',
+        'winlogon.exe',
+        'System',
+        'svchost.exe'
       )
+      and not ps.name in (
+        'svchost.exe',
+        'services.exe',
+        'lsass.exe',
+        'csrss.exe',
+        'smss.exe',
+        'wininit.exe',
+        'winlogon.exe',
+        'explorer.exe',
+        'System',
+        'MsMpEng.exe',
+        'TrustedInstaller.exe',
+        'RuntimeBroker.exe',
+        'SearchIndexer.exe',
+        'spoolsv.exe'
+      )
+      and not kevt.arg[cmdline] icontains (
+        '-k netsvcs',
+        '-k DcomLaunch',
+        'RuntimeBroker',
+        '-Embedding',
+        '--start-in-tray'
+      )
+      and not pe.is_signed
     )|
     |(
       kevt.name = 'CreateFile'
       and kevt.arg[share_mask] = 'READ|DELETE'
       and kevt.arg[file_name] iendswith '.exe'
-      and not ps.name = 'explorer.exe'
-      and not file.name imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\SysWOW64\\*',
-        '?:\\Program Files\\*',
-        '?:\\ProgramData\\*',
-        '?:\\Users\\*\\AppData\\Local\\Programs\\*'
-      )
+      and not ps.exe imatches '?:\\Windows\\System32\\*'
+      and not ps.exe imatches '?:\\Windows\\SysWOW64\\*'
+      and not ps.exe imatches '?:\\Program Files\\*'
+      and not ps.exe imatches '?:\\Program Files (x86)\\*'
       and not ps.sid = 'S-1-5-18'
+      and not ps.parent.exe imatches '?:\\Windows\\System32\\*'
+      and not ps.parent.exe imatches '?:\\Program Files\\*'
+      and not ps.parent.exe imatches '?:\\Program Files (x86)\\*'
+      and not file.name imatches '?:\\Windows\\System32\\*'
+      and not file.name imatches '?:\\Windows\\SysWOW64\\*'
+      and not file.name imatches '?:\\Program Files\\*'
+      and not file.name imatches '?:\\Program Files (x86)\\*'
+      and not file.name imatches '?:\\ProgramData\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\Local\\Programs\\*'
+      and not file.name imatches '?:\\Windows\\SoftwareDistribution\\*'
       and not pe.is_signed
     )|
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'DATA'
-      and not ps.name = 'explorer.exe'
-      and not file.name imatches (
-        '?:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Explorer\\*',
-        '?:\\Program Files\\*',
-        '?:\\Windows\\*',
-        '?:\\Users\\*\\AppData\\Local\\Programs\\*'
-      )
+      and not ps.exe imatches '?:\\Windows\\System32\\*'
+      and not ps.exe imatches '?:\\Windows\\SysWOW64\\*'
+      and not ps.exe imatches '?:\\Program Files\\*'
+      and not ps.exe imatches '?:\\Program Files (x86)\\*'
       and not ps.sid = 'S-1-5-18'
+      and not ps.parent.exe imatches '?:\\Windows\\System32\\*'
+      and not ps.parent.exe imatches '?:\\Program Files\\*'
+      and not ps.parent.exe imatches '?:\\Program Files (x86)\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Explorer\\*'
+      and not file.name imatches '?:\\Program Files\\*'
+      and not file.name imatches '?:\\Program Files (x86)\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\Local\\Programs\\*'
       and not pe.is_signed
     )|
     
