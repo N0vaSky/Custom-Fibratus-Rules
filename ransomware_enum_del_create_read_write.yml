@@ -76,7 +76,7 @@ condition: >
     )|
 
 output: |
-  Detected multi-step pattern matching enum/delete → create → read → read-or-write → final write/create.
+  Detected suspicious multi-step file i/o pattern matching enum/delete → create → read → read-or-write → final write/create. Commonly associated with Ransomware.
 
 severity: critical
 action:
