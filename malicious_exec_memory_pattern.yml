@@ -33,8 +33,8 @@ condition: >
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
       and not ps.sid = 'S-1-5-18'
+      and not ps.name imatches 'svchost.exe'
       and not ps.name in (
-        'svchost.exe',
         'services.exe',
         'lsass.exe',
         'csrss.exe',
@@ -56,31 +56,20 @@ condition: >
         '-Embedding',
         '--start-in-tray'
       )
-      and not ps.parent.name in (
-        'services.exe',
-        'wininit.exe',
-        'lsass.exe',
-        'winlogon.exe',
-        'System',
-        'svchost.exe',
-        'explorer.exe'
-      )
-      and not ps.exe imatches ('?:\\WINDOWS\\explorer.exe', '?:\\Windows\\explorer.exe')
+      and not ps.parent.exe imatches ('?:\\WINDOWS\\System32\\*', '?:\\Windows\\System32\\*')
+      and not ps.parent.exe imatches ('?:\\Program Files\\*', '?:\\Program Files (x86)\\*')
       and not ps.exe imatches ('?:\\WINDOWS\\System32\\*', '?:\\Windows\\System32\\*')
       and not ps.exe imatches ('?:\\WINDOWS\\SysWOW64\\*', '?:\\Windows\\SysWOW64\\*')
       and not ps.exe imatches ('?:\\Program Files\\*', '?:\\Program Files (x86)\\*')
-      and not ps.parent.exe imatches ('?:\\WINDOWS\\System32\\*', '?:\\Windows\\System32\\*')
-      and not ps.parent.exe imatches ('?:\\Program Files\\*', '?:\\Program Files (x86)\\*')
       and not pe.is_signed
     )|
     |(
       kevt.name = 'CreateFile'
       and kevt.arg[share_mask] = 'READ|DELETE'
       and kevt.arg[file_name] iendswith '.exe'
-      # Quick system process exclusions first  
       and not ps.sid = 'S-1-5-18'
+      and not ps.name imatches 'svchost.exe'
       and not ps.name in (
-        'svchost.exe',
         'services.exe',
         'lsass.exe',
         'csrss.exe',
@@ -92,7 +81,6 @@ condition: >
       and not ps.exe imatches ('?:\\WINDOWS\\System32\\*', '?:\\Windows\\System32\\*')
       and not ps.exe imatches ('?:\\WINDOWS\\SysWOW64\\*', '?:\\Windows\\SysWOW64\\*')
       and not ps.exe imatches ('?:\\Program Files\\*', '?:\\Program Files (x86)\\*')
-      and not ps.parent.exe imatches ('?:\\WINDOWS\\System32\\*', '?:\\Windows\\System32\\*')
       and not file.name imatches ('?:\\WINDOWS\\System32\\*', '?:\\Windows\\System32\\*')
       and not file.name imatches ('?:\\WINDOWS\\SysWOW64\\*', '?:\\Windows\\SysWOW64\\*')
       and not file.name imatches ('?:\\Program Files\\*', '?:\\Program Files (x86)\\*')
@@ -105,20 +93,10 @@ condition: >
       kevt.name = 'MapViewFile'
       and file.view.type = 'DATA'
       and not ps.sid = 'S-1-5-18'
-      and not ps.name in (
-        'svchost.exe',
-        'services.exe',
-        'lsass.exe',
-        'csrss.exe',
-        'smss.exe',
-        'wininit.exe',
-        'winlogon.exe',
-        'explorer.exe'
-      )
+      and not ps.name imatches 'svchost.exe'
       and not ps.exe imatches ('?:\\WINDOWS\\System32\\*', '?:\\Windows\\System32\\*')
       and not ps.exe imatches ('?:\\WINDOWS\\SysWOW64\\*', '?:\\Windows\\SysWOW64\\*')
       and not ps.exe imatches ('?:\\Program Files\\*', '?:\\Program Files (x86)\\*')
-      and not ps.parent.exe imatches ('?:\\WINDOWS\\System32\\*', '?:\\Windows\\System32\\*')
       and not file.name imatches ('?:\\WINDOWS\\*', '?:\\Windows\\*')
       and not file.name imatches ('?:\\Program Files\\*', '?:\\Program Files (x86)\\*')
       and not file.name imatches '?:\\Users\\*\\AppData\\Local\\Programs\\*'
