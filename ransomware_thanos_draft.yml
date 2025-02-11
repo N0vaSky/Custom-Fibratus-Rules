@@ -61,7 +61,16 @@ condition: >
           'wininit.exe',
           'lsass.exe',
           'winlogon.exe',
-          'System'
+          'System',
+          'svchost.exe'
+        )
+      )
+      and not (
+        kevt.arg[cmdline] icontains (
+          '-k DcomLaunch',
+          'RuntimeBroker',
+          '-Embedding',
+          'Microsoft.Windows.Search'
         )
       )
     )|
@@ -69,21 +78,15 @@ condition: >
       kevt.name = 'CreateFile'
       and kevt.arg[share_mask] = 'READ|DELETE'
       and kevt.arg[file_name] iendswith '.exe'
+      and not file.name imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\SysWOW64\\*'
+      )
     )|
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'DATA'
-      and file.view.size = 90112
-    )|
-    |(
-      kevt.name = 'UnmapViewFile'
-      and file.view.type = 'DATA'
-      and file.view.size = 90112
-    )|
-    |(
-      kevt.name = 'CreateFile'
-      and kevt.arg[share_mask] = 'READ'
-      and kevt.arg[file_name] iendswith '.exe'
+      and not file.name imatches '?:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_*.db'
     )|
 
 output: |
