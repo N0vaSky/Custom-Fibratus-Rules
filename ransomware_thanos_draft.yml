@@ -49,28 +49,24 @@ condition: >
           'SearchIndexer.exe',
           'spoolsv.exe'
         )
-      )
-      and not ps.exe imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\explorer.exe',
-        '?:\\Program Files\\Windows Defender\\*'
-      )
-      and not (
-        ps.parent.name in (
+        or ps.exe imatches (
+          '?:\\Windows\\System32\\*',
+          '?:\\Windows\\explorer.exe',
+          '?:\\Program Files\\Windows Defender\\*'
+        )
+        or ps.parent.name in (
           'services.exe',
           'wininit.exe',
           'lsass.exe',
           'winlogon.exe',
-          'System',
-          'svchost.exe'
+          'System'
         )
-      )
-      and not (
-        kevt.arg[cmdline] icontains (
+        or ps.sid = 'S-1-5-18'
+        or kevt.arg[cmdline] icontains (
+          '-k netsvcs',
           '-k DcomLaunch',
           'RuntimeBroker',
-          '-Embedding',
-          'Microsoft.Windows.Search'
+          '-Embedding'
         )
       )
     )|
@@ -80,13 +76,23 @@ condition: >
       and kevt.arg[file_name] iendswith '.exe'
       and not file.name imatches (
         '?:\\Windows\\System32\\*',
-        '?:\\Windows\\SysWOW64\\*'
+        '?:\\Windows\\SysWOW64\\*',
+        '?:\\Program Files\\*',
+        '?:\\ProgramData\\*'
       )
+      and not ps.sid = 'S-1-5-18'
     )|
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'DATA'
-      and not file.name imatches '?:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_*.db'
+      and not (
+        file.name imatches (
+          '?:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_*.db',
+          '?:\\Program Files\\*',
+          '?:\\Windows\\*'
+        )
+        or ps.sid = 'S-1-5-18'
+      )
     )|
 
 output: |
