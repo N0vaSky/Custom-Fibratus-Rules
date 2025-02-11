@@ -22,10 +22,6 @@ references:
   - 'https://attack.mitre.org/techniques/T1562/001/'
   - 'https://www.microsoft.com/security/blog/2020/07/15/malicious-manipulation-of-hosts-file-blocking-windows-update/'
 condition: >
-  sequence
-    maxspan 5s
-    by ps.uuid
-    |(
       open_file
         and
       file.name imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
@@ -51,13 +47,7 @@ condition: >
           'cmd.exe'
         )
       )
-    )|
-    |(
-      write_file
-        and
-      file.name imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
-        and
-      not ps.name in
+      and not ps.name in
       (
         'TrustedInstaller.exe',
         'svchost.exe',
