@@ -26,30 +26,70 @@ references:
 
 condition: >
   sequence
-    maxspan 30ms
+    maxspan 40ms
     by ps.uuid
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
       and file.view.protection = 'READONLY'
       and not (
-        ps.name = 'explorer.exe'
-          or
-        ps.exe matches 'C:\\Windows\\explorer.exe'
-          or
-        ps.exe imatches 'msedge.exe'
-          or
-        ps.exe matches 'C:\\Windows\\System32\\*'
-          or
-        ps.exe matches 'C:\\Windows\\SysWOW64\\*'
-          or
-        ps.exe matches 'C:\\Program Files\\*'
-          or
-        ps.parent.name in ('services.exe', 'svchost.exe')
-          or
-        kevt.arg[cmdline] contains '/Processid:'
-          or
-        kevt.arg[cmdline] icontains '-k DcomLaunch'
+        ps.name in (
+          'svchost.exe',
+          'services.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'smss.exe',
+          'wininit.exe',
+          'winlogon.exe',
+          'explorer.exe',
+          'System',
+          'MsMpEng.exe',
+          'TrustedInstaller.exe',
+          'RuntimeBroker.exe',
+          'SearchIndexer.exe',
+          'spoolsv.exe',
+          'WmiPrvSE.exe',
+          'dllhost.exe',
+          'conhost.exe',
+          'taskhostw.exe',
+          'CompPkgSrv.exe',
+          'msiexec.exe',
+          'SearchHost.exe',
+          'ShellExperienceHost.exe',
+          'sihost.exe',
+          'StartMenuExperienceHost.exe',
+          'SearchApp.exe',
+          'fontdrvhost.exe',
+          'dwm.exe',
+          'ctfmon.exe',
+          'SecurityHealthService.exe',
+          'SearchProtocolHost.exe',
+          'SearchFilterHost.exe'
+        )
+        or ps.exe imatches (
+          '?:\\Windows\\System32\\*',
+          '?:\\Windows\\SysWOW64\\*',
+          '?:\\Windows\\explorer.exe',
+          '?:\\Program Files\\*',
+          '?:\\Program Files (x86)\\*',
+          '?:\\ProgramData\\*',
+          '?:\\Windows\\ServiceProfiles\\*'
+        )
+        or ps.parent.name in (
+          'services.exe',
+          'wininit.exe',
+          'lsass.exe',
+          'winlogon.exe',
+          'System',
+          'svchost.exe',
+          'MsMpEng.exe'
+        )
+        or ps.parent.exe imatches (
+          '?:\\Windows\\System32\\*',
+          '?:\\Program Files\\Windows Defender\\*',
+          '?:\\Program Files\\*',
+          '?:\\Program Files (x86)\\*'
+        )
       )
     )|
     |(
@@ -59,11 +99,24 @@ condition: >
     )|
     |(
       kevt.name = 'CreateFile'
+      and kevt.arg[type] = 'Directory'
+      and kevt.arg[share_mask] = 'READ|WRITE'
+      and file.name imatches (
+        '?:\\Users\\*\\Desktop\\*',
+        '?:\\Users\\*\\Documents\\*',
+        '?:\\Users\\*\\Pictures\\*'
+      )
+    )|
+    |(
+      kevt.name = 'CreateFile'
       and kevt.arg[share_mask] = 'READ|DELETE'
-      and kevt.arg[file_name] iendswith '.exe'
-      and not kevt.arg[file_name] imatches (
+      and not file.name imatches (
         '?:\\Windows\\*',
-        '?:\\Program Files*'
+        '?:\\Program Files*',
+        '?:\\ProgramData\\*',
+        '?:\\Windows\\ServiceProfiles\\*',
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\SysWOW64\\*'
       )
     )|
 output: |
