@@ -117,13 +117,10 @@ condition: >
       'DownloadString(',
       'New-Object Net.WebClient',
       'New-Object Net.Sockets.TCPClient',
-      'Start-Process',
       '-encodedcommand',
       '-enc ',
-      '-nop ',
       '-w hidden',
       '-windowstyle hidden',
-      'hidden',
       'SOCK_STREAM',
       'SOCK_DGRAM',
       '/inet/tcp/',
@@ -131,6 +128,7 @@ condition: >
       'perl -e',
       'ruby -e',
       'lua -e',
+      'msfvenom',
       'php -r',
       'exec(',
       'shell_exec(',
@@ -142,7 +140,6 @@ condition: >
       '>& /dev/null',
       'mkfifo',
       'mknod',
-      'msfvenom',
       'pipe',
       'AF_INET',
       'subprocess',
@@ -155,8 +152,6 @@ condition: >
       '.accept(',
       'IEX(',
       'Invoke-Expression',
-      '-noni',
-      '-noninteractive',
       'GetStream()',
       'StandardInput',
       'StandardOutput',
@@ -183,12 +178,11 @@ condition: >
       'ruby -e',
       'lua -e',
       'php -r',
+      'msfvenom',
       'mkfifo',
-      'mknod',
-      'msfvenom'
+      'mknod'
     )
   )
-  and not kevt.arg[cmdline] icontains 'Action1'
     and
   not ps.parent.name in 
   (
@@ -196,6 +190,7 @@ condition: >
     'smss.exe',
     'wininit.exe',
     'System',
+    'action1agent.exe',
     'action1_agent.exe'
   )
     and
@@ -203,9 +198,20 @@ condition: >
   (
     '?:\\Windows\\WinSxS\\*',
     '?:\\Program Files\\Windows Defender\\*',
-    '?:\\WINDOWS\\Action1\\action1_agent.exe'
+    '?:\\Windows\\Action1\\*'
   )
-
+    and
+  not ps.exe imatches
+  (
+    '?:\\Windows\\Action1\\*',
+    '?:\\WINDOWS\\Action1\\scripts\\*'
+  )
+    and
+  not ps.cmdline icontains
+  (
+    'C:\\WINDOWS\\Action1\\scripts\\',
+    '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\'
+  )
 output: |
   Reverse Shell Activity Detected:
   Process Information:
