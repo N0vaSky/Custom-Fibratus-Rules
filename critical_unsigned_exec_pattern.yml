@@ -1,9 +1,11 @@
-name: Ransomware Process Detected (3)
+name: Critical Suspicious Executable Pattern (Unsigned)
 id: 01a35edb-78c2-5a09-9d7c-2f18e145517c
 version: 2.0.0
 description: |
-  Detects Thanos ransomware through its distinctive sequential PAGEFILE mapping pattern
-  followed by characteristic file access sequence, before encryption begins.
+  Detects critical system abuse through unsigned executables exhibiting suspicious behavioral
+  patterns including sequential PAGEFILE mapping and file access sequences. While commonly
+  associated with ransomware, this pattern matches any unsigned executable performing
+  suspicious system operations requiring immediate response.
 
 enabled: true
 
