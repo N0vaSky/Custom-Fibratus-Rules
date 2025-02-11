@@ -26,80 +26,34 @@ references:
 
 condition: >
   sequence
-    maxspan 50ms
+    maxspan 10ms
     by ps.uuid
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
       and file.view.protection = 'READONLY'
-      and not (
-        ps.name in (
-          'svchost.exe',
-          'services.exe',
-          'lsass.exe',
-          'csrss.exe',
-          'smss.exe',
-          'wininit.exe',
-          'winlogon.exe',
-          'explorer.exe',
-          'System',
-          'MsMpEng.exe',
-          'TrustedInstaller.exe',
-          'RuntimeBroker.exe',
-          'SearchIndexer.exe',
-          'spoolsv.exe',
-          'WmiPrvSE.exe',
-          'dllhost.exe',
-          'conhost.exe'
-        )
-        or ps.exe imatches (
-          '?:\\Windows\\System32\\*',
-          '?:\\Windows\\SysWOW64\\*',
-          '?:\\Windows\\explorer.exe',
-          '?:\\Program Files\\*',
-          '?:\\Program Files (x86)\\*',
-          '?:\\ProgramData\\*'
-        )
-        or ps.parent.name in (
-          'services.exe',
-          'wininit.exe',
-          'System',
-          'svchost.exe'
-        )
-      )
-    )|
-    |(
-      kevt.name = 'LoadImage'
-      and image.is_exec = true
-      and image.signature.type = 'NONE'
-      and not file.name imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\SysWOW64\\*',
-        '?:\\Program Files\\*'
+      and not ps.name in (
+        'svchost.exe',
+        'services.exe',
+        'lsass.exe',
+        'csrss.exe',
+        'smss.exe',
+        'wininit.exe',
+        'System'
       )
     )|
     |(
       kevt.name = 'MapViewFile'
-      and file.view.type in ('IMAGE', 'IMAGE_NO_EXECUTE')
-      and file.name imatches (
-        '?:\\Windows\\System32\\*.dll',
-        '?:\\Windows\\SysWOW64\\*.dll'
-      )
+      and file.view.type = 'PAGEFILE'
+      and file.view.protection = 'READONLY'
     )|
     |(
-      kevt.name = 'CreateFile'
-      and kevt.arg[type] = 'Directory'
-      and kevt.arg[share_mask] = 'READ|WRITE'
-      and file.name imatches (
+      kevt.name = 'LoadImage'
+      and image.signature.type = 'NONE'
+      and image.signature.level = 'UNCHECKED'
+      and not file.name imatches (
         '?:\\Windows\\*',
-        '?:\\Users\\*\\Desktop\\*'
-      )
-    )|
-    |(
-      kevt.name = 'EnumDirectory'
-      and kevt.arg[directory] imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\SysWOW64\\*'
+        '?:\\Program Files*'
       )
     )|
 
