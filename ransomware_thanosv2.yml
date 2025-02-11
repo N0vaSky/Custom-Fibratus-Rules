@@ -26,7 +26,7 @@ references:
 
 condition: >
   sequence
-    maxspan 40ms
+    maxspan 50ms
     by ps.uuid
     |(
       kevt.name = 'MapViewFile'
@@ -50,21 +50,7 @@ condition: >
           'spoolsv.exe',
           'WmiPrvSE.exe',
           'dllhost.exe',
-          'conhost.exe',
-          'taskhostw.exe',
-          'CompPkgSrv.exe',
-          'msiexec.exe',
-          'SearchHost.exe',
-          'ShellExperienceHost.exe',
-          'sihost.exe',
-          'StartMenuExperienceHost.exe',
-          'SearchApp.exe',
-          'fontdrvhost.exe',
-          'dwm.exe',
-          'ctfmon.exe',
-          'SecurityHealthService.exe',
-          'SearchProtocolHost.exe',
-          'SearchFilterHost.exe'
+          'conhost.exe'
         )
         or ps.exe imatches (
           '?:\\Windows\\System32\\*',
@@ -72,53 +58,51 @@ condition: >
           '?:\\Windows\\explorer.exe',
           '?:\\Program Files\\*',
           '?:\\Program Files (x86)\\*',
-          '?:\\ProgramData\\*',
-          '?:\\Windows\\ServiceProfiles\\*'
+          '?:\\ProgramData\\*'
         )
         or ps.parent.name in (
           'services.exe',
           'wininit.exe',
-          'lsass.exe',
-          'winlogon.exe',
           'System',
-          'svchost.exe',
-          'MsMpEng.exe'
-        )
-        or ps.parent.exe imatches (
-          '?:\\Windows\\System32\\*',
-          '?:\\Program Files\\Windows Defender\\*',
-          '?:\\Program Files\\*',
-          '?:\\Program Files (x86)\\*'
+          'svchost.exe'
         )
       )
     )|
     |(
+      kevt.name = 'LoadImage'
+      and image.is_exec = true
+      and image.signature.type = 'NONE'
+      and not file.name imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\SysWOW64\\*',
+        '?:\\Program Files\\*'
+      )
+    )|
+    |(
       kevt.name = 'MapViewFile'
-      and file.view.type = 'PAGEFILE'
-      and file.view.protection = 'READONLY'
+      and file.view.type in ('IMAGE', 'IMAGE_NO_EXECUTE')
+      and file.name imatches (
+        '?:\\Windows\\System32\\*.dll',
+        '?:\\Windows\\SysWOW64\\*.dll'
+      )
     )|
     |(
       kevt.name = 'CreateFile'
       and kevt.arg[type] = 'Directory'
       and kevt.arg[share_mask] = 'READ|WRITE'
       and file.name imatches (
-        '?:\\Users\\*\\Desktop\\*',
-        '?:\\Users\\*\\Documents\\*',
-        '?:\\Users\\*\\Pictures\\*'
+        '?:\\Windows\\*',
+        '?:\\Users\\*\\Desktop\\*'
       )
     )|
     |(
-      kevt.name = 'CreateFile'
-      and kevt.arg[share_mask] = 'READ|DELETE'
-      and not file.name imatches (
-        '?:\\Windows\\*',
-        '?:\\Program Files*',
-        '?:\\ProgramData\\*',
-        '?:\\Windows\\ServiceProfiles\\*',
+      kevt.name = 'EnumDirectory'
+      and kevt.arg[directory] imatches (
         '?:\\Windows\\System32\\*',
         '?:\\Windows\\SysWOW64\\*'
       )
     )|
+
 output: |
   Potential Thanos ransomware startup pattern detected:
   Process: %ps.name (PID: %ps.pid)
