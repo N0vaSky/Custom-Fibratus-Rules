@@ -209,6 +209,11 @@ condition: >
     'C:\\WINDOWS\\Action1\\scripts\\',
     '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\'
   )
+    and
+  not ps.cmdline imatches
+  (
+    '?:\\Users\\*\\AppData\\Local\\Temp\\*.vbs'
+  )
 output: |
   Reverse Shell Activity Detected:
   Process Information:
