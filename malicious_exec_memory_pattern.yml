@@ -69,6 +69,12 @@ condition: >
           '-Embedding'
         )
       )
+        and not file.name imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\SysWOW64\\*',
+        '?:\\Program Files\\*',
+        '?:\\ProgramData\\*'
+        )
     )|
     |(
       kevt.name = 'CreateFile'
