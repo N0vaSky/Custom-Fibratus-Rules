@@ -89,7 +89,7 @@ condition: >
     )|
 
 output: |
-  Potential Thanos ransomware startup pattern detected:
+  Potential Malicious Unsigned Executable Pattern pattern detected:
   Process: %ps.name (PID: %ps.pid)
   Command Line: %ps.cmdline
   Parent Process: %ps.parent.name (PPID: %ps.ppid)
