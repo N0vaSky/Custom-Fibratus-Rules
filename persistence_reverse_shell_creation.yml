@@ -214,6 +214,8 @@ condition: >
   (
     '?:\\Users\\*\\AppData\\Local\\Temp\\*.vbs'
   )
+    and
+  not ps.parent.cmdline imatches '?:\\Users\\*\\AppData\\Local\Temp\\*'
 output: |
   Reverse Shell Activity Detected:
   Process Information:
