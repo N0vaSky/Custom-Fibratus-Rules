@@ -40,10 +40,19 @@ condition: >
       not ps.exe imatches
         (
           '?:\\Windows\\system32\\*',
+          '?:\\Windows\\SysWOW64\\*',
           '?:\\Program Files*',
           '?:\\ProgramData\\*',
           '?:\\Users\\*\\AppData\\Local\\Programs\\*',
           '?:\\Users\\*\\AppData\\Local\\Temp\\*'
+        )
+        or
+    (
+      ps.exe imatches
+        (
+          '?:\\Windows\\Temp\\*',
+          '?:\\Users\\*\\AppData\\*',
+          '?:\\Windows\\*\\Temp\\*'
         )
         and
       not ps.name in
