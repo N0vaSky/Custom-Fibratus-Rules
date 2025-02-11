@@ -188,6 +188,7 @@ condition: >
       'msfvenom'
     )
   )
+  and not kevt.arg[cmdline] icontains 'Action1'
     and
   not ps.parent.name in 
   (
