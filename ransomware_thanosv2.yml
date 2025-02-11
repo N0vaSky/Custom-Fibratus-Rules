@@ -26,21 +26,13 @@ references:
 
 condition: >
   sequence
-    maxspan 10ms
+    maxspan 5ms
     by ps.uuid
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
       and file.view.protection = 'READONLY'
-      and not ps.name in (
-        'svchost.exe',
-        'services.exe',
-        'lsass.exe',
-        'csrss.exe',
-        'smss.exe',
-        'wininit.exe',
-        'System'
-      )
+      and not ps.name in ('System', 'smss.exe', 'csrss.exe')
     )|
     |(
       kevt.name = 'MapViewFile'
@@ -49,12 +41,8 @@ condition: >
     )|
     |(
       kevt.name = 'LoadImage'
+      and image.is_exec = true
       and image.signature.type = 'NONE'
-      and image.signature.level = 'UNCHECKED'
-      and not file.name imatches (
-        '?:\\Windows\\*',
-        '?:\\Program Files*'
-      )
     )|
 
 output: |
