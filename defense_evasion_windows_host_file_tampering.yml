@@ -22,25 +22,48 @@ references:
   - 'https://attack.mitre.org/techniques/T1562/001/'
   - 'https://www.microsoft.com/security/blog/2020/07/15/malicious-manipulation-of-hosts-file-blocking-windows-update/'
 condition: >
-  kevt.name = 'CreateFile'
-  and file.name contains '\\Windows\\System32\\drivers\\etc\\hosts'
-  and ps.name in (
-    'notepad.exe',
-    'wordpad.exe',
-    'notepad++.exe',
-    'sublime_text.exe',
-    'code.exe',
-    'atom.exe',
-    'ultraedit.exe',
-    'textpad.exe',
-    'editpadlite.exe',
-    'brackets.exe',
-    'komodoedit.exe',
-    'gvim.exe',
-    'vim.exe',
-    'emacs.exe'
-  )
-  or kevt.arg[cmdline] imatches '?:\\Windows\\system32\\drivers\etc\hosts'
+  sequence
+    maxspan 5s
+    by ps.uuid
+    |(
+      open_file
+        and
+      file.name imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
+        and
+      (
+        ps.name in
+        (
+          'notepad.exe',
+          'wordpad.exe',
+          'notepad++.exe',
+          'sublime_text.exe',
+          'code.exe',
+          'atom.exe',
+          'vim.exe',
+          'powershell.exe',
+          'pwsh.exe'
+        )
+          or
+        ps.parent.name in
+        (
+          'powershell.exe',
+          'pwsh.exe',
+          'cmd.exe'
+        )
+      )
+    )|
+    |(
+      write_file
+        and
+      file.name imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
+        and
+      not ps.name in
+      (
+        'TrustedInstaller.exe',
+        'svchost.exe',
+        'System'
+      )
+    )|
 
 output: >
   **Windows Hosts File Tampering Detected (CreateFile)!**
