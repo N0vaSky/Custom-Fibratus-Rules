@@ -1,10 +1,12 @@
-name: Ransomware Process Detected (5)
+name: Generic Ransomware Initialization Pattern
 id: 95a1d8c3-7e4b-42f5-b9d1-8c5e4f6a2b3d
 version: 5.0.0
 description: |
-  Ultra-aggressive early-stage detection for Hive ransomware focusing on
-  the earliest possible indicators before process spawning occurs.
-  Targets initial setup actions that occur before child process creation.
+  Identifies potentially malicious software by tracking 
+  suspicious process initialization patterns. Monitors 
+  critical system interactions and memory mapping behaviors 
+  within an ultra-narrow time window to detect advanced 
+  threat techniques.
 
 enabled: true
 
@@ -70,7 +72,7 @@ condition: >
     )|
 
 output: |
-  Hive ransomware early stage detected:
+  Generic Ransomware Initialization Pattern detected:
   Process: %ps.name (PID %ps.pid)
   Parent: %ps.parent.name (PPID %ps.ppid)
   Command Line: %ps.cmdline
