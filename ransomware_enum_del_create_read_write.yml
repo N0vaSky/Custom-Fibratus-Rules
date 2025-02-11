@@ -22,6 +22,7 @@ condition: >
       and not file.name imatches '?:\\Windows\\*'
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
+      and not ps.exe imatches '?:\\Program Files*'
       and not (
         ps.name in (
           'OneDrive.exe',
