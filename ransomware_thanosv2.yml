@@ -25,23 +25,31 @@ references:
   - https://attack.mitre.org/techniques/T1486/
 
 condition: >
-  sequence
-    maxspan 2ms
-    |kevt.name = 'MapViewFile'
-      and
-    file.view.type = 'PAGEFILE'
-      and
-    kevt.pid != 4|
-    |kevt.name = 'MapViewFile'
-      and
-    file.view.type = 'PAGEFILE'|
-    |kevt.name = 'LoadImage'
-      and
-    image.signature.type = 'NONE'
-      and
-    image.signature.level = 'UNCHECKED'
-      and
-    image.is_exec = true|
+  kevt.name = 'LoadImage'
+    and
+  image.is_exec = true
+    and
+  image.signature.type = 'NONE'
+    and
+  image.signature.level = 'UNCHECKED'
+    and
+  not ps.exe imatches
+    (
+      '?:\\Windows\\*',
+      '?:\\Program Files*',
+      '?:\\ProgramData\\*'
+    )
+    and
+  not ps.name in
+    (
+      'svchost.exe',
+      'services.exe',
+      'lsass.exe',
+      'csrss.exe',
+      'smss.exe',
+      'wininit.exe',
+      'System'
+    )
 
 output: |
   Potential Thanos ransomware startup pattern detected:
