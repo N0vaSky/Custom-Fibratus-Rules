@@ -46,9 +46,7 @@ condition: >
           '?:\\Users\\*\\AppData\\Local\\Programs\\*',
           '?:\\Users\\*\\AppData\\Local\\Temp\\*'
         )
-        or
-    (
-      ps.exe imatches
+        or ps.exe imatches
         (
           '?:\\Windows\\Temp\\*',
           '?:\\Users\\*\\AppData\\*',
