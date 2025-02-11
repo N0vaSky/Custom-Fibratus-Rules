@@ -39,7 +39,7 @@ condition: >
         and
       not ps.exe imatches
         (
-          '?:\\Windows\\*',
+          '?:\\Windows\\system32\\*',
           '?:\\Program Files*',
           '?:\\ProgramData\\*',
           '?:\\Users\\*\\AppData\\Local\\Programs\\*',
