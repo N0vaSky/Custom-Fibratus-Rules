@@ -75,7 +75,7 @@ condition: >
         '?:\\Program Files\\*',
         '?:\\ProgramData\\*'
         )
-        and not cwd imatches (
+        and not ps.cwd imatches (
         '?:\\Windows\\System32\\*',
         '?:\\Windows\\SysWOW64\\*',
         '?:\\Program Files\\*',
