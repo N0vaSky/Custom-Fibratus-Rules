@@ -3,7 +3,7 @@ id: 9f7aab92-0002-4fcd-85ea-59692f44712f
 version: 1.0.0
 description: |
   Detects a multi-step pattern: enum directory or delete old file, 
-  then create a new file, read it multiple times, and finally write.
+  then create a new file, read it multiple times, and finally write. Commonly associated with Ransomware.
 
 enabled: true
 
