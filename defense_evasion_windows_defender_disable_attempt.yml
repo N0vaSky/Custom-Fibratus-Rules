@@ -26,8 +26,7 @@ condition: >
       kevt.name = 'RegSetValue'
       and ps.name = 'MsMpEng.exe'
       and (
-        registry.key.name imatches '*\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
-        or registry.key.name imatches '*\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Reporting\\LastRtpTurnedOffTime'
+        registry.key.name = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
       )
     )
   )
@@ -67,7 +66,7 @@ condition: >
   )
 
 output: >
-  **Windows Defender Tampering Detected!**
+  **Windows Defender Tampering Detected! : If value = 1 then Defender is Disabled.**
   - **Process:** %ps.name (PID: %ps.pid)
   - **Command Line:** %kevt.arg[cmdline]
   - **Registry Key Modified:** %registry.key.name
