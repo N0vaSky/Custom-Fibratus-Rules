@@ -30,61 +30,6 @@ condition: >
     maxspan 50ms
     by ps.uuid
     |(
-      kevt.name = 'MapViewFile'
-      and file.view.type = 'PAGEFILE'
-      and not (
-        ps.name in (
-          'svchost.exe',
-          'services.exe',
-          'lsass.exe',
-          'csrss.exe',
-          'smss.exe',
-          'wininit.exe',
-          'winlogon.exe',
-          'explorer.exe',
-          'System',
-          'MsMpEng.exe',
-          'TrustedInstaller.exe',
-          'RuntimeBroker.exe',
-          'SearchIndexer.exe',
-          'spoolsv.exe'
-        )
-        or ps.exe imatches (
-          '?:\\Windows\\System32\\*',
-          '?:\\Windows\\explorer.exe',
-          '?:\\Program Files\\Windows Defender\\*'
-        )
-        or ps.parent.name in (
-          'services.exe',
-          'wininit.exe',
-          'lsass.exe',
-          'winlogon.exe',
-          'System',
-          'explorer.exe'
-        )
-        or ps.sid = 'S-1-5-18'
-        or kevt.arg[cmdline] icontains (
-          '-k netsvcs',
-          '-k DcomLaunch',
-          'RuntimeBroker',
-          '-Embedding'
-        )
-      )
-        and not file.name imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\SysWOW64\\*',
-        '?:\\Program Files\\*',
-        '?:\\ProgramData\\*'
-        )
-        and not ps.cwd imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\SysWOW64\\*',
-        '?:\\Program Files\\*',
-        '?:\\Program Files (x86)\\*',
-        '?:\\ProgramData\\*'
-        )
-    )|
-    |(
       kevt.name = 'CreateFile'
       and kevt.arg[share_mask] = 'READ|DELETE'
       and kevt.arg[file_name] iendswith '.exe'
@@ -92,6 +37,7 @@ condition: >
         '?:\\Windows\\System32\\*',
         '?:\\Windows\\SysWOW64\\*',
         '?:\\Program Files\\*',
+        '?:\\Program Files (x86\\*',
         '?:\\ProgramData\\*'
       )
       and not ps.sid = 'S-1-5-18'
