@@ -32,11 +32,16 @@ condition: >
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
+      and not ps.name imatches 'explorer.exe'
+      and not ps.exe imatches ('?:\\WINDOWS\\explorer.exe', '?:\\Windows\\explorer.exe')
+      and not ps.exe imatches '?:\\WINDOWS\\System32\\*'
       and not ps.exe imatches '?:\\Windows\\System32\\*'
+      and not ps.exe imatches '?:\\WINDOWS\\SysWOW64\\*'
       and not ps.exe imatches '?:\\Windows\\SysWOW64\\*'
       and not ps.exe imatches '?:\\Program Files\\*'
       and not ps.exe imatches '?:\\Program Files (x86)\\*'
       and not ps.sid = 'S-1-5-18'
+      and not ps.parent.exe imatches '?:\\WINDOWS\\System32\\*'
       and not ps.parent.exe imatches '?:\\Windows\\System32\\*'
       and not ps.parent.exe imatches '?:\\Program Files\\*'
       and not ps.parent.exe imatches '?:\\Program Files (x86)\\*'
@@ -46,7 +51,8 @@ condition: >
         'lsass.exe',
         'winlogon.exe',
         'System',
-        'svchost.exe'
+        'svchost.exe',
+        'explorer.exe'
       )
       and not ps.name in (
         'svchost.exe',
@@ -77,15 +83,22 @@ condition: >
       kevt.name = 'CreateFile'
       and kevt.arg[share_mask] = 'READ|DELETE'
       and kevt.arg[file_name] iendswith '.exe'
+      and not ps.name imatches 'explorer.exe'
+      and not ps.exe imatches ('?:\\WINDOWS\\explorer.exe', '?:\\Windows\\explorer.exe')
+      and not ps.exe imatches '?:\\WINDOWS\\System32\\*'
       and not ps.exe imatches '?:\\Windows\\System32\\*'
+      and not ps.exe imatches '?:\\WINDOWS\\SysWOW64\\*'
       and not ps.exe imatches '?:\\Windows\\SysWOW64\\*'
       and not ps.exe imatches '?:\\Program Files\\*'
       and not ps.exe imatches '?:\\Program Files (x86)\\*'
       and not ps.sid = 'S-1-5-18'
+      and not ps.parent.exe imatches '?:\\WINDOWS\\System32\\*'
       and not ps.parent.exe imatches '?:\\Windows\\System32\\*'
       and not ps.parent.exe imatches '?:\\Program Files\\*'
       and not ps.parent.exe imatches '?:\\Program Files (x86)\\*'
+      and not file.name imatches '?:\\WINDOWS\\System32\\*'
       and not file.name imatches '?:\\Windows\\System32\\*'
+      and not file.name imatches '?:\\WINDOWS\\SysWOW64\\*'
       and not file.name imatches '?:\\Windows\\SysWOW64\\*'
       and not file.name imatches '?:\\Program Files\\*'
       and not file.name imatches '?:\\Program Files (x86)\\*'
@@ -97,17 +110,23 @@ condition: >
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'DATA'
+      and not ps.name imatches 'explorer.exe'
+      and not ps.exe imatches ('?:\\WINDOWS\\explorer.exe', '?:\\Windows\\explorer.exe')
+      and not ps.exe imatches '?:\\WINDOWS\\System32\\*'
       and not ps.exe imatches '?:\\Windows\\System32\\*'
+      and not ps.exe imatches '?:\\WINDOWS\\SysWOW64\\*'
       and not ps.exe imatches '?:\\Windows\\SysWOW64\\*'
       and not ps.exe imatches '?:\\Program Files\\*'
       and not ps.exe imatches '?:\\Program Files (x86)\\*'
       and not ps.sid = 'S-1-5-18'
+      and not ps.parent.exe imatches '?:\\WINDOWS\\System32\\*'
       and not ps.parent.exe imatches '?:\\Windows\\System32\\*'
       and not ps.parent.exe imatches '?:\\Program Files\\*'
       and not ps.parent.exe imatches '?:\\Program Files (x86)\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Explorer\\*'
       and not file.name imatches '?:\\Program Files\\*'
       and not file.name imatches '?:\\Program Files (x86)\\*'
+      and not file.name imatches '?:\\WINDOWS\\*'
       and not file.name imatches '?:\\Windows\\*'
       and not file.name imatches '?:\\Users\\*\\AppData\\Local\\Programs\\*'
       and not pe.is_signed
