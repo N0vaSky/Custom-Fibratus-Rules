@@ -1,10 +1,11 @@
-name: Ransomware Process Detected (7)
+name: Malicious System DLL Abuse
 id: 845e2f1a-6f3d-42a1-9d3c-e148e5c88c2d
 version: 4.0.0
 description: |
-  Generic ransomware detection rule based on successful early-stage detection patterns.
-  Focuses on fundamental behaviors common across ransomware variants while maintaining
-  system stability through careful process exclusions.
+  Detects malicious system DLL abuse patterns indicating potential system compromise (ransomware or malware).
+  Focuses on fundamental behaviors seen across multiple threat types including DLL
+  loading sequence abuse, suspicious file operations, and system resource manipulation
+  that require immediate investigation.
 
 enabled: true
 
@@ -75,7 +76,7 @@ condition: >
     )|
 
 output: |
-  Ransomware behavior detected:
+  Possible Malicious System DLL Abuse detected!:
   Process: %ps.name (PID %ps.pid)
   Image Path: %ps.exe
   Parent Process: %ps.parent.name (PPID %ps.ppid)
