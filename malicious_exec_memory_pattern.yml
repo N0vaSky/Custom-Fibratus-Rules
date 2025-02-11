@@ -75,6 +75,13 @@ condition: >
         '?:\\Program Files\\*',
         '?:\\ProgramData\\*'
         )
+        and not cwd imatches (
+        '?:\\Windows\\System32\\*',
+        '?:\\Windows\\SysWOW64\\*',
+        '?:\\Program Files\\*',
+        '?:\\Program Files (x86)\\*',
+        '?:\\ProgramData\\*'
+        )
     )|
     |(
       kevt.name = 'CreateFile'
