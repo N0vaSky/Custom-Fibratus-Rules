@@ -29,9 +29,6 @@ condition: >
         registry.key.name imatches '*\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
         or registry.key.name imatches '*\\HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Reporting\\LastRtpTurnedOffTime'
       )
-      and (
-        registry.value = 1
-      )
     )
   )
   or
