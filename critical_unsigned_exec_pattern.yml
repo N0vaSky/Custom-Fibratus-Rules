@@ -27,7 +27,7 @@ references:
 
 condition: >
   sequence
-    maxspan 50ms
+    maxspan 70ms
     by ps.uuid
     |(
       kevt.name = 'LoadImage'
