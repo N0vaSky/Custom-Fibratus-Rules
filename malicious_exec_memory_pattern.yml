@@ -32,52 +32,55 @@ condition: >
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'PAGEFILE'
-      and not ps.name in (
-        'svchost.exe',
-        'services.exe',
-        'lsass.exe',
-        'csrss.exe',
-        'smss.exe',
-        'wininit.exe',
-        'winlogon.exe',
-        'explorer.exe',
-        'System',
-        'MsMpEng.exe',
-        'TrustedInstaller.exe',
-        'RuntimeBroker.exe',
-        'SearchIndexer.exe',
-        'spoolsv.exe'
-      )
-      and not ps.exe imatches (
-        '?:\\Windows\\System32\\*',
-        '?:\\Windows\\explorer.exe',
-        '?:\\Program Files\\Windows Defender\\*',
-        '?:\\Program Files\\*',
-        '?:\\Program Files (x86)\\*',
-        '?:\\Users\\*\\AppData\\Local\\Programs\\*'
-      )
-      and not ps.parent.name in (
-        'services.exe',
-        'wininit.exe',
-        'lsass.exe',
-        'winlogon.exe',
-        'System',
-        'explorer.exe'
-      )
-      and not ps.sid = 'S-1-5-18'
-      and not pe.is_signed
-      and not kevt.arg[cmdline] icontains (
-        '-k netsvcs',
-        '-k DcomLaunch',
-        'RuntimeBroker',
-        '-Embedding',
-        '--start-in-tray'
+      and (
+        not ps.name = 'explorer.exe'
+        and not ps.name in (
+          'svchost.exe',
+          'services.exe',
+          'lsass.exe',
+          'csrss.exe',
+          'smss.exe',
+          'wininit.exe',
+          'winlogon.exe',
+          'System',
+          'MsMpEng.exe',
+          'TrustedInstaller.exe',
+          'RuntimeBroker.exe',
+          'SearchIndexer.exe',
+          'spoolsv.exe'
+        )
+        and not ps.exe imatches (
+          '?:\\Windows\\System32\\*',
+          '?:\\Windows\\explorer.exe',
+          '?:\\Program Files\\Windows Defender\\*',
+          '?:\\Program Files\\*',
+          '?:\\Program Files (x86)\\*',
+          '?:\\Users\\*\\AppData\\Local\\Programs\\*'
+        )
+        and not ps.parent.name in (
+          'services.exe',
+          'wininit.exe',
+          'lsass.exe',
+          'winlogon.exe',
+          'System',
+          'explorer.exe'
+        )
+        and not ps.sid = 'S-1-5-18'
+        and not pe.is_signed
+        and not kevt.arg[cmdline] icontains (
+          '-k netsvcs',
+          '-k DcomLaunch',
+          'RuntimeBroker',
+          '-Embedding',
+          '--start-in-tray'
+        )
       )
     )|
     |(
       kevt.name = 'CreateFile'
       and kevt.arg[share_mask] = 'READ|DELETE'
       and kevt.arg[file_name] iendswith '.exe'
+      and not ps.name = 'explorer.exe'
       and not file.name imatches (
         '?:\\Windows\\System32\\*',
         '?:\\Windows\\SysWOW64\\*',
@@ -91,8 +94,9 @@ condition: >
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'DATA'
+      and not ps.name = 'explorer.exe'
       and not file.name imatches (
-        '?:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Explorer\\thumbcache_*.db',
+        '?:\\Users\\*\\AppData\\Local\\Microsoft\\Windows\\Explorer\\*',
         '?:\\Program Files\\*',
         '?:\\Windows\\*',
         '?:\\Users\\*\\AppData\\Local\\Programs\\*'
