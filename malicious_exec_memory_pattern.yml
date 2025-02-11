@@ -59,7 +59,8 @@ condition: >
           'wininit.exe',
           'lsass.exe',
           'winlogon.exe',
-          'System'
+          'System',
+          'explorer.exe'
         )
         or ps.sid = 'S-1-5-18'
         or kevt.arg[cmdline] icontains (
