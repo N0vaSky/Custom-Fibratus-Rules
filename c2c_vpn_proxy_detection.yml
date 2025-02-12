@@ -30,23 +30,33 @@ condition: >
   (kevt.name = 'CreateProcess'
     and ps.name endswith ('.exe')
     and (
-      kevt.arg[cmdline] contains 'openvpn'
-      or kevt.arg[cmdline] contains 'wireguard'
-      or kevt.arg[cmdline] contains 'nordvpn'
-      or kevt.arg[cmdline] contains 'expressvpn'
-      or kevt.arg[cmdline] contains 'protonvpn'
-      or kevt.arg[cmdline] contains 'surfshark'
-      or kevt.arg[cmdline] contains 'cyberghost'
-      or kevt.arg[cmdline] contains 'windscribe'
-      or kevt.arg[cmdline] contains 'privateinternetaccess'
-      or kevt.arg[cmdline] contains 'mullvad'
-      or kevt.arg[cmdline] contains 'vpn.exe'
-      or kevt.arg[cmdline] contains 'proxifier'
-      or kevt.arg[cmdline] contains 'softether'
-      or kevt.arg[cmdline] contains 'hide.me'
-      or kevt.arg[cmdline] contains 'torguard'
-      or kevt.arg[cmdline] contains 'psiphon'
-      or kevt.arg[cmdline] contains 'hotspotshield'
+      kevt.arg[cmdline] icontains 'openvpn'
+      or kevt.arg[cmdline] icontains 'wireguard'
+      or kevt.arg[cmdline] icontains 'nordvpn'
+      or kevt.arg[cmdline] icontains 'expressvpn'
+      or kevt.arg[cmdline] icontains 'protonvpn'
+      or kevt.arg[cmdline] icontains 'surfshark'
+      or kevt.arg[cmdline] icontains 'cyberghost'
+      or kevt.arg[cmdline] icontains 'windscribe'
+      or kevt.arg[cmdline] icontains 'privateinternetaccess'
+      or kevt.arg[cmdline] icontains 'mullvad'
+      or kevt.arg[cmdline] icontains 'vpn.exe'
+      or kevt.arg[cmdline] icontains 'proxifier'
+      or kevt.arg[cmdline] icontains 'softether'
+      or kevt.arg[cmdline] icontains 'hide.me'
+      or kevt.arg[cmdline] icontains 'torguard'
+      or kevt.arg[cmdline] icontains 'psiphon'
+      or kevt.arg[cmdline] icontains 'hotspotshield'
+      or kevt.arg[cmdline] icontains 'stunnel'
+      or kevt.arg[cmdline] icontains 'ssh -D'
+      or kevt.arg[cmdline] icontains 'ssh -L'
+      or kevt.arg[cmdline] icontains 'ssh -R'
+      or kevt.arg[cmdline] icontains 'plink -D'
+      or kevt.arg[cmdline] icontains 'plink -L'
+      or kevt.arg[cmdline] icontains 'plink -R'
+      or kevt.arg[cmdline] icontains '-tunnel='
+      or kevt.arg[cmdline] icontains '-keygen'
+      or kevt.arg[cmdline] icontains 'sshd'
     ))
 
   or (kevt.category = 'dns'
@@ -71,7 +81,8 @@ condition: >
       'whoer.net',
       'proxylist.com',
       'proxifier.com',
-      'vpnbook.com'
+      'vpnbook.com',
+      'stunnel.org'
     ))
 
   or (kevt.category = 'network'
@@ -97,9 +108,10 @@ condition: >
       'whoer.net',
       'proxylist.com',
       'proxifier.com',
-      'vpnbook.com'
-    )
-    and net.dport in (443, 1080, 1194, 500, 4500, 1723, 51820, 8282))
+      'vpnbook.com',
+      'stunnel.org'
+    ))
+
 
 output: |
   **VPN or Proxy Usage Detected!**
