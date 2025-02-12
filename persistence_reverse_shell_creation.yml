@@ -210,6 +210,20 @@ condition: >
     '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\'
   )
     and
+  not (
+    ps.cmdline icontains '-ExecutionPolicy Bypass -File'
+      and
+    not ps.cmdline icontains
+    (
+      'invoke-webrequest',
+      'DownloadString(',
+      'New-Object Net.WebClient',
+      'New-Object Net.Sockets.TCPClient',
+      'IEX(',
+      'Invoke-Expression'
+    )
+  )
+    and
   not ps.cmdline imatches
   (
     '?:\\Users\\*\\AppData\\Local\\Temp\\*.vbs'
