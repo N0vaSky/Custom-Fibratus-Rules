@@ -37,6 +37,9 @@ condition: >
       and not ps.exe imatches '?:\\Program Files*'
       
       and ps.name != 'explorer.exe'
+      and ps.name != 'RuntimeBroker.exe'
+      and ps.name != 'scvhost.exe'
+      
     )|
 
     |(
