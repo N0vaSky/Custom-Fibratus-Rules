@@ -211,7 +211,7 @@ condition: >
   )
     and
   not (
-    ps.cmdline icontains '-ExecutionPolicy Bypass -File'
+    ps.cmdline imatches '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"'
       and
     not ps.cmdline icontains
     (
