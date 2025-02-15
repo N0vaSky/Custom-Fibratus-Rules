@@ -139,7 +139,6 @@ condition: >
       'assert(',
       '>& /dev/null',
       'mknod',
-      'pipe',
       'AF_INET',
       'subprocess',
       'pty.spawn',
