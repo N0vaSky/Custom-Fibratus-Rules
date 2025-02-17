@@ -25,7 +25,10 @@ condition: >
       or
       ps.parent.name in script_interpreters
       or
-      pe.is_trusted = false
+      (
+        pe.is_trusted = false
+        and not ps.name = 'System'
+      )
     )
       and
     (
