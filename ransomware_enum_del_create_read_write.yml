@@ -30,7 +30,8 @@ condition: >
           'BackupService.exe',
           'GoogleDriveFS.exe',
           'BoxSync.exe',
-          'SafeBackup.exe'
+          'SafeBackup.exe',
+          'AdobeGCClient.exe'
         )
       )
     )|
