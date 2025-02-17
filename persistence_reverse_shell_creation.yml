@@ -54,7 +54,7 @@ condition: >
     'ConPtyShell', 'invoke-webrequest', 'DownloadString(', 'New-Object Net.WebClient', 'New-Object Net.Sockets.TCPClient', 
     '-encodedcommand', '-enc ', '-w hidden', '-windowstyle hidden', 'SOCK_STREAM', 'SOCK_DGRAM', '/inet/tcp/', 
     'python -c', 'perl -e', 'ruby -e', 'lua -e', 'msfvenom', 'php -r', 'exec(', 'shell_exec(', 'system(', 'popen(', 
-    'proc_open(', 'eval(', 'assert(', '>& /dev/null', 'mknod', 'pipe', 'AF_INET', 'subprocess', 'pty.spawn', 
+    'proc_open(', 'eval(', 'assert(', '>& /dev/null', 'mknod', 'AF_INET', 'subprocess', 'pty.spawn', 
     'PTY.spawn', '.connect(', '.bind(', '.listen(', '.accept(', 'IEX(', 'Invoke-Expression', 'GetStream()', 
     'StandardInput', 'StandardOutput', 'createProcess')
   )
