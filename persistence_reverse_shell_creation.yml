@@ -35,169 +35,43 @@ references:
   - https://attack.mitre.org/techniques/T1572/
 
 condition: >
-  spawn_process
-  and
+  spawn_process 
+    and 
   (
-    ps.name in 
-    (
-      'cmd.exe',
-      'powershell.exe',
-      'pwsh.exe',
-      'bash.exe',
-      'sh.exe',
-      'ash.exe',
-      'bsh.exe',
-      'csh.exe',
-      'ksh.exe',
-      'zsh.exe',
-      'tcsh.exe',
-      'python.exe',
-      'python3.exe',
-      'perl.exe',
-      'ruby.exe',
-      'lua.exe',
-      'php.exe',
-      'nc.exe',
-      'ncat.exe',
-      'netcat.exe',
-      'socat.exe',
-      'openssl.exe',
-      'awk.exe',
-      'java.exe',
-      'telnet.exe',
-      'node.exe',
-      'nodejs.exe',
-      'mshta.exe',
-      'wscript.exe',
-      'cscript.exe'
-    )
-      or
-    kevt.arg[exe] iendswith 
-    (
-      'cmd.exe',
-      'powershell.exe',
-      'pwsh.exe',
-      'bash.exe',
-      'sh.exe',
-      'python.exe',
-      'python3.exe',
-      'perl.exe',
-      'ruby.exe',
-      'lua.exe',
-      'php.exe',
-      'nc.exe',
-      'ncat.exe',
-      'netcat.exe',
-      'socat.exe',
-      'java.exe',
-      'node.exe'
-    )
+    ps.name in ('cmd.exe', 'powershell.exe', 'pwsh.exe', 'bash.exe', 'sh.exe', 'ash.exe', 'bsh.exe', 'csh.exe', 
+    'ksh.exe', 'zsh.exe', 'tcsh.exe', 'python.exe', 'python3.exe', 'perl.exe', 'ruby.exe', 'lua.exe', 'php.exe', 
+    'nc.exe', 'ncat.exe', 'netcat.exe', 'socat.exe', 'openssl.exe', 'awk.exe', 'java.exe', 'telnet.exe', 'node.exe', 
+    'nodejs.exe', 'mshta.exe', 'wscript.exe', 'cscript.exe')
+      or 
+    kevt.arg[exe] iendswith ('cmd.exe', 'powershell.exe', 'pwsh.exe', 'bash.exe', 'sh.exe', 'python.exe', 
+    'python3.exe', 'perl.exe', 'ruby.exe', 'lua.exe', 'php.exe', 'nc.exe', 'ncat.exe', 'netcat.exe', 'socat.exe', 
+    'java.exe', 'node.exe')
   )
-    and
+    and 
   (
-    ps.cmdline icontains
-    (
-      'nc ',
-      'ncat ',
-      '-e /bin/sh',
-      '-e /bin/bash',
-      '-e cmd.exe',
-      'bash -i',
-      '0<&',
-      'dev/tcp/',
-      'dev/udp/',
-      'connect(',
-      'socket(',
-      'Socket.connect',
-      'fsockopen(',
-      'TCPSocket',
-      'CreatePseudoConsole',
-      'ConPtyShell',
-      'invoke-webrequest',
-      'DownloadString(',
-      'New-Object Net.WebClient',
-      'New-Object Net.Sockets.TCPClient',
-      '-encodedcommand',
-      '-enc ',
-      '-w hidden',
-      '-windowstyle hidden',
-      'SOCK_STREAM', 
-      'SOCK_DGRAM',
-      '/inet/tcp/',
-      'python -c',
-      'perl -e',
-      'ruby -e',
-      'lua -e',
-      'msfvenom',
-      'php -r',
-      'exec(',
-      'shell_exec(',
-      'system(',
-      'popen(',
-      'proc_open(',
-      'eval(',
-      'assert(',
-      '>& /dev/null',
-      'mknod',
-      'pipe',
-      'AF_INET',
-      'subprocess',
-      'pty.spawn',
-      'PTY.spawn',
-      '.connect(',
-      '.bind(',
-      '.listen(',
-      '.accept(',
-      'IEX(',
-      'Invoke-Expression',
-      'GetStream()',
-      'StandardInput',
-      'StandardOutput',
-      'createProcess'
-    )
+    ps.cmdline icontains ('nc ', 'ncat ', '-e /bin/sh', '-e /bin/bash', '-e cmd.exe', 'bash -i', '0<&', 
+    'dev/tcp/', 'dev/udp/', 'connect(', 'socket(', 'Socket.connect', 'fsockopen(', 'TCPSocket', 'CreatePseudoConsole', 
+    'ConPtyShell', 'invoke-webrequest', 'DownloadString(', 'New-Object Net.WebClient', 'New-Object Net.Sockets.TCPClient', 
+    '-encodedcommand', '-enc ', '-w hidden', '-windowstyle hidden', 'SOCK_STREAM', 'SOCK_DGRAM', '/inet/tcp/', 
+    'python -c', 'perl -e', 'ruby -e', 'lua -e', 'msfvenom', 'php -r', 'exec(', 'shell_exec(', 'system(', 'popen(', 
+    'proc_open(', 'eval(', 'assert(', '>& /dev/null', 'mknod', 'pipe', 'AF_INET', 'subprocess', 'pty.spawn', 
+    'PTY.spawn', '.connect(', '.bind(', '.listen(', '.accept(', 'IEX(', 'Invoke-Expression', 'GetStream()', 
+    'StandardInput', 'StandardOutput', 'createProcess')
   )
-    and
-  not ps.parent.name in 
-  (
-    'services.exe',
-    'smss.exe', 
-    'wininit.exe',
-    'System',
-    'action1agent.exe',
-    'action1_agent.exe'
-  )
-    and
-  not ps.parent.exe imatches
-  (
-    '?:\\Windows\\WinSxS\\*',
-    '?:\\Program Files\\Windows Defender\\*',
-    '?:\\Windows\\Action1\\*'
-  )
-    and
-  not ps.exe imatches
-  (
-    '?:\\Windows\\Action1\\*',
-    '?:\\WINDOWS\\Action1\\scripts\\*'
-  )
-    and
-  not ps.cmdline icontains
-  (
-    'C:\\WINDOWS\\Action1\\scripts\\',
-    '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\'
-  )
-    and
-  (
-    not ps.cmdline imatches '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"'
-      or
-    ps.cmdline icontains
-    (
-      'invoke-webrequest',
-      'DownloadString(',
-      'New-Object Net.WebClient',
-      'New-Object Net.Sockets.TCPClient',
-      'IEX(',
-      'Invoke-Expression'
-    )
+    and 
+  not ps.parent.name in ('services.exe', 'smss.exe', 'wininit.exe', 'System', 'action1agent.exe', 'action1_agent.exe')
+    and 
+  not ps.parent.exe imatches ('?:\\Windows\\WinSxS\\*', '?:\\Program Files\\Windows Defender\\*', '?:\\Windows\\Action1\\*')
+    and 
+  not ps.exe imatches ('?:\\Windows\\Action1\\*', '?:\\WINDOWS\\Action1\\scripts\\*')
+    and 
+  not ps.cmdline icontains ('C:\\WINDOWS\\Action1\\scripts\\', '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\')
+    and 
+  not (
+    ps.cmdline imatches '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"'
+      and 
+    not ps.cmdline icontains ('invoke-webrequest', 'DownloadString(', 'New-Object Net.WebClient', 
+    'New-Object Net.Sockets.TCPClient', 'IEX(', 'Invoke-Expression')
   )
   
 output: |
