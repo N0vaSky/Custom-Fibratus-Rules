@@ -211,7 +211,7 @@ condition: >
     and
   not (
     ps.cmdline imatches '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"'
-      and
+      or
     not ps.cmdline icontains
     (
       'invoke-webrequest',
