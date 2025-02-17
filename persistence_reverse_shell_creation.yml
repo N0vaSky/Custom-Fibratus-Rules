@@ -121,7 +121,7 @@ condition: >
       '-enc ',
       '-w hidden',
       '-windowstyle hidden',
-      'SOCK_STREAM',
+      'SOCK_STREAM', 
       'SOCK_DGRAM',
       '/inet/tcp/',
       'python -c',
@@ -139,6 +139,7 @@ condition: >
       'assert(',
       '>& /dev/null',
       'mknod',
+      'pipe',
       'AF_INET',
       'subprocess',
       'pty.spawn',
@@ -154,36 +155,12 @@ condition: >
       'StandardOutput',
       'createProcess'
     )
-      or
-    kevt.arg[cmdline] icontains
-    (
-      'nc ',
-      'ncat ',
-      '-e /bin/sh',
-      '-e /bin/bash',
-      '-e cmd.exe',
-      'bash -i',
-      '0<&',
-      'dev/tcp/',
-      'dev/udp/',
-      'socket(',
-      'Socket.connect',
-      'invoke-webrequest',
-      '-encodedcommand',
-      'python -c',
-      'perl -e',
-      'ruby -e',
-      'lua -e',
-      'php -r',
-      'msfvenom',
-      'mknod'
-    )
   )
     and
   not ps.parent.name in 
   (
     'services.exe',
-    'smss.exe',
+    'smss.exe', 
     'wininit.exe',
     'System',
     'action1agent.exe',
@@ -209,10 +186,10 @@ condition: >
     '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\'
   )
     and
-  not (
-    ps.cmdline imatches '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"'
+  (
+    not ps.cmdline imatches '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"'
       or
-    not ps.cmdline icontains
+    ps.cmdline icontains
     (
       'invoke-webrequest',
       'DownloadString(',
@@ -221,16 +198,6 @@ condition: >
       'IEX(',
       'Invoke-Expression'
     )
-  )
-    and
-  not ps.cmdline imatches
-  (
-    '?:\\Users\\*\\AppData\\Local\\Temp\\*.vbs'
-  )
-    and
-  not ps.parent.cmdline imatches 
-  (
-    '?:\\Users\\*\\AppData\\Local\\Temp\\*'
   )
   
 output: |
