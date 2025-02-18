@@ -65,7 +65,12 @@ condition: >
     and 
   not ps.exe imatches ('?:\\Windows\\Action1\\*', '?:\\WINDOWS\\Action1\\scripts\\*')
     and 
-  not ps.cmdline icontains ('C:\\WINDOWS\\Action1\\scripts\\', '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\')
+  not ps.cmdline icontains
+  (
+    'C:\\WINDOWS\\Action1\\scripts\\',
+    '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\',
+    'Fibratus-Install'
+  )
     and 
   not (
     ps.cmdline imatches '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"'
