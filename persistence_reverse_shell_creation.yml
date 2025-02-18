@@ -73,7 +73,7 @@ condition: >
   )
     and 
   not (
-    ps.cmdline imatches '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"'
+    ps.cmdline imatches '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*"'
       and 
     not ps.cmdline icontains ('invoke-webrequest', 'DownloadString(', 'New-Object Net.WebClient', 
     'New-Object Net.Sockets.TCPClient', 'IEX(', 'Invoke-Expression')
