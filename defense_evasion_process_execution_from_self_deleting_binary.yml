@@ -31,7 +31,7 @@ condition: >
     maxspan 1m
     |delete_file
       and
-    file.info.is_disposition_file_delete
+    file.info.is_disposition_delete_file
       and
     not file.name imatches '?:\\Windows\\SoftwareDistribution\\Download\\*'
     | by file.name
