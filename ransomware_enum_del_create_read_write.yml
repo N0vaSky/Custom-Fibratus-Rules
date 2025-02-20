@@ -1,9 +1,10 @@
 name: Ransomware In Progress - File I/O variant – Enum / Delete / Create / Read / Write
 id: 9f7aab92-0002-4fcd-85ea-59692f44712f
-version: 1.0.0
+version: 1.1.0
 description: |
   Detects a multi-step pattern: enum directory or delete old file, 
   then create a new file, read it multiple times, and finally write. Commonly associated with Ransomware.
+  Excludes legitimate system operations and registry transactions.
 
 enabled: true
 
@@ -18,7 +19,15 @@ condition: >
         kevt.name = 'DeleteFile'
       )
       and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches 
+        (
+          '?:\\Users\\*\\AppData\\*',
+          '?:\\Users\\*\\NTUSER.DAT*',
+          '?:\\Users\\*\\*.LOG*',
+          '?:\\Users\\*\\*.TM.blf',
+          '?:\\Users\\*\\*.regtrans-ms',
+          '?:\\Users\\*\\*.LOG[1-9]'
+        )
       and not file.name imatches '?:\\Windows\\*'
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
@@ -31,15 +40,35 @@ condition: >
           'GoogleDriveFS.exe',
           'BoxSync.exe',
           'SafeBackup.exe',
-          'AdobeGCClient.exe'
+          'AdobeGCClient.exe',
+          'svchost.exe',
+          'services.exe',
+          'System',
+          'MsMpEng.exe'
         )
       )
+      and not ps.parent.name in
+        (
+          'services.exe',
+          'wininit.exe',
+          'smss.exe',
+          'System'
+        )
+      and not (ps.domain = 'NT AUTHORITY' and ps.username = 'SYSTEM')
     )|
     |(
       kevt.name = 'CreateFile'
       and file.operation in ('CREATE','OPEN')
       and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches 
+        (
+          '?:\\Users\\*\\AppData\\*',
+          '?:\\Users\\*\\NTUSER.DAT*',
+          '?:\\Users\\*\\*.LOG*',
+          '?:\\Users\\*\\*.TM.blf',
+          '?:\\Users\\*\\*.regtrans-ms',
+          '?:\\Users\\*\\*.LOG[1-9]'
+        )
       and not file.name imatches '?:\\Windows\\*'
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
@@ -47,7 +76,15 @@ condition: >
     |(
       kevt.name = 'ReadFile'
       and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches 
+        (
+          '?:\\Users\\*\\AppData\\*',
+          '?:\\Users\\*\\NTUSER.DAT*',
+          '?:\\Users\\*\\*.LOG*',
+          '?:\\Users\\*\\*.TM.blf',
+          '?:\\Users\\*\\*.regtrans-ms',
+          '?:\\Users\\*\\*.LOG[1-9]'
+        )
       and not file.name imatches '?:\\Windows\\*'
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
@@ -59,7 +96,15 @@ condition: >
         kevt.name = 'WriteFile'
       )
       and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches 
+        (
+          '?:\\Users\\*\\AppData\\*',
+          '?:\\Users\\*\\NTUSER.DAT*',
+          '?:\\Users\\*\\*.LOG*',
+          '?:\\Users\\*\\*.TM.blf',
+          '?:\\Users\\*\\*.regtrans-ms',
+          '?:\\Users\\*\\*.LOG[1-9]'
+        )
       and not file.name imatches '?:\\Windows\\*'
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
@@ -71,7 +116,15 @@ condition: >
         kevt.name = 'CreateFile'
       )
       and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches 
+        (
+          '?:\\Users\\*\\AppData\\*',
+          '?:\\Users\\*\\NTUSER.DAT*',
+          '?:\\Users\\*\\*.LOG*',
+          '?:\\Users\\*\\*.TM.blf',
+          '?:\\Users\\*\\*.regtrans-ms',
+          '?:\\Users\\*\\*.LOG[1-9]'
+        )
       and not file.name imatches '?:\\Windows\\*'
       and not file.name imatches '?:\\Program Files*'
       and not file.name imatches '?:\\ProgramData\\*'
