@@ -39,6 +39,7 @@ condition: >
       and ps.name != 'explorer.exe'
       and ps.name != 'RuntimeBroker.exe'
       and ps.name != 'scvhost.exe'
+      and ps.parent.name != 'explorer.exe'
       
     )|
 
