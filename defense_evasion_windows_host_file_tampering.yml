@@ -2,57 +2,57 @@ name: Windows Hosts File Tampering
 id: f7b2c9d3-99e7-41d5-bb4a-6ea1a5f7f9e2
 version: 1.0.0
 description: >
-  Detects when a known text editor opens the Windows Hosts file via a CreateFile event.
-  This rule aims to catch potential tampering when the hosts file is opened by an editor,
-  which may indicate unauthorized modifications.
-enabled: true
+  Detects when a known text editor, command interpreter or untrusted process opens the Windows hosts 
+  file for potential tampering.
+  Adversaries can hijack the hosts files to block traffic to download/update servers or redirect the
+  traffic to arbitrary servers under their control.
 labels:
   tactic.id: TA0005
   tactic.name: Defense Evasion
-  tactic.ref: 'https://attack.mitre.org/tactics/TA0005/'
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
   technique.id: T1562.001
   technique.name: Impair Defenses - Disable or Modify Tools
-  technique.ref: 'https://attack.mitre.org/techniques/T1562/001/'
-tags:
-  - hosts file
-  - tampering
-  - defense evasion
-  - text editor
+  technique.ref: https://attack.mitre.org/techniques/T1562/001/
 references:
-  - 'https://attack.mitre.org/techniques/T1562/001/'
-  - 'https://www.microsoft.com/security/blog/2020/07/15/malicious-manipulation-of-hosts-file-blocking-windows-update/'
+  - https://www.malwarebytes.com/blog/news/2016/09/hosts-file-hijacks
+
 condition: >
-      open_file
-        and
-      file.name imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
-        and
+  open_file and kevt.pid != 4
+    and
+  file.name imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
+    and
+  (
+    ps.name iin
       (
-        ps.name in
-        (
-          'notepad.exe',
-          'wordpad.exe',
-          'notepad++.exe',
-          'sublime_text.exe',
-          'code.exe',
-          'atom.exe',
-          'vim.exe',
-          'powershell.exe',
-          'pwsh.exe'
-        )
-          or
-        ps.parent.name in
-        (
-          'powershell.exe',
-          'pwsh.exe',
-          'cmd.exe'
-        )
+        'notepad.exe',
+        'wordpad.exe',
+        'notepad++.exe',
+        'sublime_text.exe',
+        'code.exe',
+        'atom.exe',
+        'vim.exe',
+        'powershell.exe',
+        'pwsh.exe'
       )
-      and not ps.name in
+      or
+    ps.parent.name iin
       (
-        'TrustedInstaller.exe',
-        'svchost.exe',
-        'System'
+        'powershell.exe',
+        'pwsh.exe',
+        'cmd.exe'
       )
+      or
+    pe.is_trusted = false
+  )
+    and
+    not
+  ps.exe imatches
+    (
+      '?:\\Windows\\servicing\\TrustedInstaller.exe',
+      '?:\\Windows\\System32\\svchost.exe'
+    )
+action:
+  - name: kill
 
 output: >
   **Windows Hosts File Tampering Detected (CreateFile)!**
