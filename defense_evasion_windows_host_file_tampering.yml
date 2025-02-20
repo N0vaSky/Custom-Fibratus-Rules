@@ -17,39 +17,62 @@ references:
   - https://www.malwarebytes.com/blog/news/2016/09/hosts-file-hijacks
 
 condition: >
-  open_file and kevt.pid != 4
+  open_file 
+    and 
+  kevt.pid != 4
     and
   file.name imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
     and
   (
-    ps.name iin
+    ps.exe imatches
       (
-        'notepad.exe',
-        'wordpad.exe',
-        'notepad++.exe',
-        'sublime_text.exe',
-        'code.exe',
-        'atom.exe',
-        'vim.exe',
-        'powershell.exe',
-        'pwsh.exe'
+        '?:\\Windows\\System32\\notepad.exe',
+        '?:\\Program Files*\\Notepad++\\notepad++.exe',
+        '?:\\Program Files*\\Sublime Text*\\sublime_text.exe',
+        '?:\\Program Files*\\Microsoft VS Code\\Code.exe',
+        '?:\\Program Files*\\Vim\\vim.exe',
+        '?:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+        '?:\\Program Files\\PowerShell\\*\\pwsh.exe'
       )
       or
-    ps.parent.name iin
+    ps.parent.exe imatches
       (
-        'powershell.exe',
-        'pwsh.exe',
-        'cmd.exe'
+        '?:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+        '?:\\Program Files\\PowerShell\\*\\pwsh.exe',
+        '?:\\Windows\\System32\\cmd.exe'
       )
       or
-    pe.is_trusted = false
+    (
+      pe.is_trusted = false
+        and
+      not ps.exe imatches
+        (
+          '?:\\Users\\*\\AppData\\Local\\Programs\\VSCodium\\VSCodium.exe',
+          '?:\\Program Files*\\Microsoft VS Code\\Code.exe',
+          '?:\\Program Files*\\JetBrains\\*',
+          '?:\\Program Files*\\Sublime Text*\\sublime_text.exe',
+          '?:\\Program Files*\\Notepad++\\notepad++.exe',
+          '?:\\Program Files*\\Vim\\vim.exe',
+          '?:\\Program Files*\\Atom\\atom.exe'
+        )
+    )
   )
     and
-    not
-  ps.exe imatches
+  not ps.exe imatches
     (
       '?:\\Windows\\servicing\\TrustedInstaller.exe',
-      '?:\\Windows\\System32\\svchost.exe'
+      '?:\\Windows\\System32\\svchost.exe',
+      '?:\\Windows\\System32\\MicrosoftEdgeUpdate.exe',
+      '?:\\Program Files\\Windows Defender\\*',
+      '?:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      '?:\\Program Files\\PowerShell\\*\\pwsh.exe'
+    )
+    and
+  not ps.parent.exe imatches
+    (
+      '?:\\Windows\\System32\\services.exe',
+      '?:\\Windows\\System32\\svchost.exe',
+      '?:\\Program Files\\Windows Defender\\*'
     )
 action:
   - name: kill
