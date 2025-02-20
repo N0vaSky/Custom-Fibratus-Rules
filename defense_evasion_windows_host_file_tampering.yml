@@ -63,9 +63,7 @@ condition: >
       '?:\\Windows\\servicing\\TrustedInstaller.exe',
       '?:\\Windows\\System32\\svchost.exe',
       '?:\\Windows\\System32\\MicrosoftEdgeUpdate.exe',
-      '?:\\Program Files\\Windows Defender\\*',
-      '?:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
-      '?:\\Program Files\\PowerShell\\*\\pwsh.exe'
+      '?:\\Program Files\\Windows Defender\\*'
     )
     and
   not ps.parent.exe imatches
