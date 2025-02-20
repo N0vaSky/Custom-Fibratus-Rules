@@ -1,6 +1,6 @@
 name: Reverse Shell Detection
 id: e74b8d1a-6a9d-4f8a-b1ef-2e24c9b3e9fc
-version: 4.0.0
+version: 4.1.0
 description: |
   Advanced detection of reverse shells across multiple languages and techniques including:
   - Traditional shell-based reverse connections (bash, cmd, powershell)
@@ -52,33 +52,85 @@ condition: >
     ps.cmdline icontains ('nc ', 'ncat ', '-e /bin/sh', '-e /bin/bash', '-e cmd.exe', 'bash -i', '0<&', 
     'dev/tcp/', 'dev/udp/', 'connect(', 'socket(', 'Socket.connect', 'fsockopen(', 'TCPSocket', 'CreatePseudoConsole', 
     'ConPtyShell', 'invoke-webrequest', 'DownloadString(', 'New-Object Net.WebClient', 'New-Object Net.Sockets.TCPClient', 
-    '-encodedcommand', '-enc ', '-w hidden', '-windowstyle hidden', 'SOCK_STREAM', 'SOCK_DGRAM', '/inet/tcp/', 
+    '-encodedcommand', '-enc ', 'SOCK_STREAM', 'SOCK_DGRAM', '/inet/tcp/', 
     'python -c', 'perl -e', 'ruby -e', 'lua -e', 'msfvenom', 'php -r', 'exec(', 'shell_exec(', 'system(', 'popen(', 
     'proc_open(', 'eval(', 'assert(', '>& /dev/null', 'mknod', 'AF_INET', 'subprocess', 'pty.spawn', 
     'PTY.spawn', '.connect(', '.bind(', '.listen(', '.accept(', 'IEX(', 'Invoke-Expression', 'GetStream()', 
     'StandardInput', 'StandardOutput', 'createProcess')
   )
     and 
-  not ps.parent.name in ('services.exe', 'smss.exe', 'wininit.exe', 'System', 'action1agent.exe', 'action1_agent.exe')
+  not ps.parent.name in 
+    (
+      'services.exe',
+      'smss.exe', 
+      'wininit.exe',
+      'System',
+      'action1agent.exe',
+      'action1_agent.exe',
+      'taskhostw.exe',
+      'svchost.exe'
+    )
     and 
-  not ps.parent.exe imatches ('?:\\Windows\\WinSxS\\*', '?:\\Program Files\\Windows Defender\\*', '?:\\Windows\\Action1\\*')
+  not ps.parent.exe imatches 
+    (
+      '?:\\Windows\\WinSxS\\*',
+      '?:\\Program Files\\Windows Defender\\*',
+      '?:\\Windows\\Action1\\*',
+      '?:\\Windows\\System32\\taskhostw.exe',
+      '?:\\Windows\\System32\\svchost.exe'
+    )
     and 
-  not ps.exe imatches ('?:\\Windows\\Action1\\*', '?:\\WINDOWS\\Action1\\scripts\\*')
+  not ps.exe imatches 
+    (
+      '?:\\Windows\\Action1\\*',
+      '?:\\WINDOWS\\Action1\\scripts\\*'
+    )
     and 
   not ps.cmdline icontains
-  (
-    'C:\\WINDOWS\\Action1\\scripts\\',
-    '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\',
-    'Fibratus-Install'
-  )
+    (
+      'C:\\WINDOWS\\Action1\\scripts\\',
+      '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\',
+      'Fibratus-Install'
+    )
     and 
   not (
-    ps.cmdline imatches '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*"'
+    ps.cmdline imatches 
+      (
+        '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"',
+        '-WindowStyle Hidden -ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"'
+      )
       and 
-    not ps.cmdline icontains ('invoke-webrequest', 'DownloadString(', 'New-Object Net.WebClient', 
-    'New-Object Net.Sockets.TCPClient', 'IEX(', 'Invoke-Expression')
+    not ps.cmdline icontains 
+      (
+        'invoke-webrequest',
+        'DownloadString(',
+        'New-Object Net.WebClient',
+        'New-Object Net.Sockets.TCPClient',
+        'IEX(',
+        'Invoke-Expression'
+      )
   )
-  
+    and
+  not (
+    ps.name = 'powershell.exe'
+      and
+    ps.parent.name in ('wscript.exe', 'cscript.exe')
+      and
+    ps.parent.cmdline imatches '?:\\Users\\*\\AppData\\Local\\Temp\\*.vbs'
+  )
+    and
+  not ps.parent.exe imatches '?:\\Users\\*\\AppData\\Local\\Temp\\*.exe'
+    and
+  not (
+    ps.name = 'powershell.exe'
+      and
+    ps.cmdline icontains '-WindowStyle Hidden'
+      and
+    (
+      ps.parent.name in ('taskhostw.exe', 'svchost.exe', 'services.exe')
+    )
+  )
+
 output: |
   Reverse Shell Activity Detected:
   Process Information:
