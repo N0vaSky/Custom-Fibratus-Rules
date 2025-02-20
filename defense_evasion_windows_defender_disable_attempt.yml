@@ -22,6 +22,7 @@ references:
 
 condition: >
   kevt.name = 'RegSetValue'
+  and ps.name = 'MsMpEng.exe'
   and (
     registry.key.name = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
     )
