@@ -21,7 +21,7 @@ references:
 
 condition: >
   sequence
-    maxspan 10ms 
+    maxspan 2ms 
     by ps.uuid
 
     |(
