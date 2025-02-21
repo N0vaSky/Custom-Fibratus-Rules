@@ -1,4 +1,4 @@
-name: Windows Hosts File Tampering 
+name: Suspicious Hosts File Access
 id: f7b2c9d3-99e7-41d5-bb4a-6ea1a5f7f9e2
 version: 1.0.0
 description: >
@@ -24,38 +24,28 @@ condition: >
   file.name imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
     and
   (
-    ps.exe imatches
+    ps.name iin
       (
-        '?:\\Windows\\System32\\notepad.exe',
-        '?:\\Program Files*\\Notepad++\\notepad++.exe',
-        '?:\\Program Files*\\Sublime Text*\\sublime_text.exe',
-        '?:\\Program Files*\\Microsoft VS Code\\Code.exe',
-        '?:\\Program Files*\\Vim\\vim.exe',
-        '?:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
-        '?:\\Program Files\\PowerShell\\*\\pwsh.exe'
+        'notepad.exe',
+        'wordpad.exe',
+        'notepad++.exe',
+        'sublime_text.exe',
+        'code.exe',
+        'vscodium.exe',
+        'atom.exe',
+        'vim.exe',
+        'powershell.exe',
+        'pwsh.exe'
       )
       or
-    ps.parent.exe imatches
+    ps.parent.name iin
       (
-        '?:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
-        '?:\\Program Files\\PowerShell\\*\\pwsh.exe',
-        '?:\\Windows\\System32\\cmd.exe'
+        'powershell.exe',
+        'pwsh.exe',
+        'cmd.exe'
       )
       or
-    (
-      pe.is_trusted = false
-        and
-      not ps.exe imatches
-        (
-          '?:\\Users\\*\\AppData\\Local\\Programs\\VSCodium\\VSCodium.exe',
-          '?:\\Program Files*\\Microsoft VS Code\\Code.exe',
-          '?:\\Program Files*\\JetBrains\\*',
-          '?:\\Program Files*\\Sublime Text*\\sublime_text.exe',
-          '?:\\Program Files*\\Notepad++\\notepad++.exe',
-          '?:\\Program Files*\\Vim\\vim.exe',
-          '?:\\Program Files*\\Atom\\atom.exe'
-        )
-    )
+    pe.is_trusted = false
   )
     and
   not ps.exe imatches
@@ -63,7 +53,11 @@ condition: >
       '?:\\Windows\\servicing\\TrustedInstaller.exe',
       '?:\\Windows\\System32\\svchost.exe',
       '?:\\Windows\\System32\\MicrosoftEdgeUpdate.exe',
-      '?:\\Program Files\\Windows Defender\\*'
+      '?:\\Program Files\\Windows Defender\\*',
+      '?:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
+      '?:\\Program Files\\PowerShell\\*\\pwsh.exe',
+      '?:\\Windows\\System32\\notepad.exe',
+      '?:\\Windows\\System32\\WindowsApps\\Microsoft.WindowsNotepad_*\\Notepad\\notepad.exe'
     )
     and
   not ps.parent.exe imatches
@@ -72,6 +66,7 @@ condition: >
       '?:\\Windows\\System32\\svchost.exe',
       '?:\\Program Files\\Windows Defender\\*'
     )
+    
 action:
   - name: kill
 
