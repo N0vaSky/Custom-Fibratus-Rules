@@ -31,7 +31,6 @@ condition: >
         'notepad++.exe',
         'sublime_text.exe',
         'code.exe',
-        'vscodium.exe',
         'atom.exe',
         'vim.exe',
         'powershell.exe',
@@ -53,11 +52,7 @@ condition: >
       '?:\\Windows\\servicing\\TrustedInstaller.exe',
       '?:\\Windows\\System32\\svchost.exe',
       '?:\\Windows\\System32\\MicrosoftEdgeUpdate.exe',
-      '?:\\Program Files\\Windows Defender\\*',
-      '?:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
-      '?:\\Program Files\\PowerShell\\*\\pwsh.exe',
-      '?:\\Windows\\System32\\notepad.exe',
-      '?:\\Windows\\System32\\WindowsApps\\Microsoft.WindowsNotepad_*\\Notepad\\notepad.exe'
+      '?:\\Program Files\\Windows Defender\\*'
     )
     and
   not ps.parent.exe imatches
