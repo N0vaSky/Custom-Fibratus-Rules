@@ -25,17 +25,33 @@ condition: >
     by ps.uuid
 
     |(
+      (
+        image.signature.type = 'NONE'
+          or
+        image.signature.level = 'UNCHECKED'
+          or
+        pe.is_trusted = false
+      )
+        and
       kevt.name = 'CreateFile'
       and file.operation = 'OPEN'
       and file.status = 'Success'
-
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and file.name imatches 
+        (
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
+        )
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
       and not ps.exe imatches '?:\\Program Files*'
-
       and not (
         ps.name in (
           'OneDrive.exe',
@@ -53,38 +69,78 @@ condition: >
       kevt.name = 'CreateFile'
       and file.operation = 'OPEN'
       and file.status = 'Success'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and file.name imatches 
+        (
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
+        )
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
     )|
 
     |(
       kevt.name = 'WriteFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and file.name imatches 
+        (
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
+        )
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
     )|
 
     |(
       kevt.name = 'RenameFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and file.name imatches 
+        (
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
+        )
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
     )|
 
     |(
       kevt.name = 'DeleteFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and file.name imatches 
+        (
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
+        )
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
     )|
 
 output: |
