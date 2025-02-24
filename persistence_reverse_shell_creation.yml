@@ -89,7 +89,7 @@ condition: >
   not ps.cmdline icontains
     (
       'C:\\WINDOWS\\Action1\\scripts\\',
-      '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\',
+      '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\'
     )
     and 
   not (
