@@ -130,12 +130,6 @@ condition: >
       ps.parent.name in ('taskhostw.exe', 'svchost.exe', 'services.exe')
     )
   )
-    and
-  not (
-    ps.name = 'powershell.exe' 
-      and 
-    ps.cmdline icontains ('Fibratus', 'FibratusEDR')
-  )
 
 output: |
   Reverse Shell Activity Detected:
