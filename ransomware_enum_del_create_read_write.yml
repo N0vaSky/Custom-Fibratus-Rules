@@ -14,6 +14,14 @@ condition: >
     by ps.uuid
     |(
       (
+        image.signature.type = 'NONE'
+          or
+        image.signature.level = 'UNCHECKED'
+          or
+        pe.is_trusted = false
+      )
+        and
+      (
         kevt.name = 'EnumDirectory'
         or
         kevt.name = 'DeleteFile'
@@ -42,18 +50,7 @@ condition: >
           'GoogleDriveFS.exe',
           'BoxSync.exe',
           'SafeBackup.exe',
-          'AdobeGCClient.exe',
-          'svchost.exe',
-          'services.exe',
-          'System',
-          'MsMpEng.exe',
-          'explorer.exe',
-          'chrome.exe',
-          'msedge.exe',
-          'firefox.exe',
-          'brave.exe',
-          'iexplore.exe',
-          'opera.exe'
+          'explorer.exe'
         )
       )
     )|
