@@ -143,7 +143,4 @@ output: |
 
 severity: critical
 
-action:
-  - name: kill
-
 min-engine-version: 2.0.0
