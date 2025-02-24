@@ -25,6 +25,14 @@ condition: >
     by ps.uuid
 
     |(
+      (
+        image.signature.type = 'NONE'
+          or
+        image.signature.level = 'UNCHECKED'
+          or
+        pe.is_trusted = false
+      )
+        and
       kevt.name = 'CreateFile'
       and file.operation = 'OPEN'
       and file.status = 'Success'
@@ -52,15 +60,7 @@ condition: >
           'GoogleDriveFS.exe',
           'BoxSync.exe',
           'SafeBackup.exe',
-          'explorer.exe',
-          'MicrosoftEdge.exe',
-          'msedge.exe',
-          'chrome.exe',
-          'firefox.exe',
-          'iexplore.exe',
-          'safari.exe',
-          'brave.exe',
-          'opera.exe'
+          'explorer.exe'
         )
       )
     )|
@@ -134,7 +134,6 @@ condition: >
       and not file.name iendswith '.url'
       and not file.name iendswith '.ini'
     )|
-
 output: |
   File-to-file with delete by %ps.name. Original read, new created, then original deleted.
 
@@ -143,4 +142,3 @@ action:
   - name: kill
 
 min-engine-version: 2.0.0
-
