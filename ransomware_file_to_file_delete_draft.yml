@@ -29,11 +29,19 @@ condition: >
       and file.operation = 'OPEN'
       and file.status = 'Success'
 
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and file.name imatches 
+      (
+        '?:\\Users\\*\\Desktop\\*',
+        '?:\\Users\\*\\Documents\\*',
+        '?:\\Users\\*\\Downloads\\*',
+        '?:\\Users\\*\\Pictures\\*',
+        '?:\\Users\\*\\Videos\\*',
+        '?:\\Users\\*\\Music\\*'
+      )
+      and not file.name iendswith 'desktop.ini'
+      and not file.name iendswith '.lnk'
+      and not file.name iendswith '.url'
+      and not file.name iendswith '.ini'
       and not ps.exe imatches '?:\\Program Files*'
 
       and not (
@@ -44,51 +52,87 @@ condition: >
           'GoogleDriveFS.exe',
           'BoxSync.exe',
           'SafeBackup.exe',
-          'explorer.exe'
+          'explorer.exe',
+          'MicrosoftEdge.exe',
+          'msedge.exe',
+          'chrome.exe',
+          'firefox.exe',
+          'iexplore.exe',
+          'safari.exe',
+          'brave.exe',
+          'opera.exe'
         )
       )
     )|
 
     |(
       kevt.name = 'ReadFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
-      and not ps.exe imatches '?:\\Program Files*'
+      and file.name imatches 
+      (
+        '?:\\Users\\*\\Desktop\\*',
+        '?:\\Users\\*\\Documents\\*',
+        '?:\\Users\\*\\Downloads\\*',
+        '?:\\Users\\*\\Pictures\\*',
+        '?:\\Users\\*\\Videos\\*',
+        '?:\\Users\\*\\Music\\*'
+      )
+      and not file.name iendswith 'desktop.ini'
+      and not file.name iendswith '.lnk'
+      and not file.name iendswith '.url'
+      and not file.name iendswith '.ini'
     )|
 
     |(
       kevt.name = 'CreateFile'
       and file.operation = 'OPEN'
       and file.status = 'Success'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
-      and not ps.exe imatches '?:\\Program Files*'
+      and file.name imatches 
+      (
+        '?:\\Users\\*\\Desktop\\*',
+        '?:\\Users\\*\\Documents\\*',
+        '?:\\Users\\*\\Downloads\\*',
+        '?:\\Users\\*\\Pictures\\*',
+        '?:\\Users\\*\\Videos\\*',
+        '?:\\Users\\*\\Music\\*'
+      )
+      and not file.name iendswith 'desktop.ini'
+      and not file.name iendswith '.lnk'
+      and not file.name iendswith '.url'
+      and not file.name iendswith '.ini'
     )|
 
     |(
       kevt.name = 'WriteFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
-      and not ps.exe imatches '?:\\Program Files*'
+      and file.name imatches 
+      (
+        '?:\\Users\\*\\Desktop\\*',
+        '?:\\Users\\*\\Documents\\*',
+        '?:\\Users\\*\\Downloads\\*',
+        '?:\\Users\\*\\Pictures\\*',
+        '?:\\Users\\*\\Videos\\*',
+        '?:\\Users\\*\\Music\\*'
+      )
+      and not file.name iendswith 'desktop.ini'
+      and not file.name iendswith '.lnk'
+      and not file.name iendswith '.url'
+      and not file.name iendswith '.ini'
     )|
 
     |(
       kevt.name = 'DeleteFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
-      and not ps.exe imatches '?:\\Program Files*'
+      and file.name imatches 
+      (
+        '?:\\Users\\*\\Desktop\\*',
+        '?:\\Users\\*\\Documents\\*',
+        '?:\\Users\\*\\Downloads\\*',
+        '?:\\Users\\*\\Pictures\\*',
+        '?:\\Users\\*\\Videos\\*',
+        '?:\\Users\\*\\Music\\*'
+      )
+      and not file.name iendswith 'desktop.ini'
+      and not file.name iendswith '.lnk'
+      and not file.name iendswith '.url'
+      and not file.name iendswith '.ini'
     )|
 
 output: |
