@@ -68,7 +68,8 @@ condition: >
       'action1agent.exe',
       'action1_agent.exe',
       'taskhostw.exe',
-      'svchost.exe'
+      'svchost.exe',
+      'FibratusEDR_Setup.exe'
     )
     and 
   not ps.parent.exe imatches 
@@ -90,7 +91,7 @@ condition: >
     (
       'C:\\WINDOWS\\Action1\\scripts\\',
       '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\',
-      'Fibratus-Install'
+      'Fibratus'
     )
     and 
   not (
@@ -130,15 +131,6 @@ condition: >
       ps.parent.name in ('taskhostw.exe', 'svchost.exe', 'services.exe')
     )
   )
-    and
-  not (
-    ps.cmdline icontains 'Fibratus'
-  )
-    and
-  not (
-    ps.cmdline icontains 'FibratusEDR'
-  )
-
 output: |
   Reverse Shell Activity Detected:
   Process Information:
