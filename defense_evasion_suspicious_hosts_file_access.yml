@@ -52,7 +52,8 @@ condition: >
       '?:\\Windows\\servicing\\TrustedInstaller.exe',
       '?:\\Windows\\System32\\svchost.exe',
       '?:\\Windows\\System32\\MicrosoftEdgeUpdate.exe',
-      '?:\\Program Files\\Windows Defender\\*'
+      '?:\\Program Files\\Windows Defender\\*',
+      '?:\\Users\\*\\AppData\\Local\\Programs\\VSCodium\\VSCodium.exe'
     )
     and
   not ps.parent.exe imatches
