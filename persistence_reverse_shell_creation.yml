@@ -68,8 +68,7 @@ condition: >
       'action1agent.exe',
       'action1_agent.exe',
       'taskhostw.exe',
-      'svchost.exe',
-      'FibratusEDR_Setup.exe'
+      'svchost.exe'
     )
     and 
   not ps.parent.exe imatches 
@@ -91,7 +90,6 @@ condition: >
     (
       'C:\\WINDOWS\\Action1\\scripts\\',
       '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\',
-      'Fibratus'
     )
     and 
   not (
