@@ -18,19 +18,21 @@ condition: >
         or
         kevt.name = 'DeleteFile'
       )
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches 
+      and file.name imatches 
         (
-          '?:\\Users\\*\\AppData\\*',
-          '?:\\Users\\*\\NTUSER.DAT*',
-          '?:\\Users\\*\\*.LOG*',
-          '?:\\Users\\*\\*.TM.blf',
-          '?:\\Users\\*\\*.regtrans-ms',
-          '?:\\Users\\*\\*.LOG[1-9]'
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
         )
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
       and not ps.exe imatches '?:\\Program Files*'
       and not (
         ps.name in (
@@ -44,50 +46,53 @@ condition: >
           'svchost.exe',
           'services.exe',
           'System',
-          'MsMpEng.exe'
+          'MsMpEng.exe',
+          'explorer.exe',
+          'chrome.exe',
+          'msedge.exe',
+          'firefox.exe',
+          'brave.exe',
+          'iexplore.exe',
+          'opera.exe'
         )
       )
-      and not ps.parent.name in
-        (
-          'services.exe',
-          'wininit.exe',
-          'smss.exe',
-          'System'
-        )
-      and not (ps.domain = 'NT AUTHORITY' and ps.username = 'SYSTEM')
     )|
     |(
       kevt.name = 'CreateFile'
       and file.operation in ('CREATE','OPEN')
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches 
+      and file.name imatches 
         (
-          '?:\\Users\\*\\AppData\\*',
-          '?:\\Users\\*\\NTUSER.DAT*',
-          '?:\\Users\\*\\*.LOG*',
-          '?:\\Users\\*\\*.TM.blf',
-          '?:\\Users\\*\\*.regtrans-ms',
-          '?:\\Users\\*\\*.LOG[1-9]'
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
         )
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
     )|
     |(
       kevt.name = 'ReadFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches 
+      and file.name imatches 
         (
-          '?:\\Users\\*\\AppData\\*',
-          '?:\\Users\\*\\NTUSER.DAT*',
-          '?:\\Users\\*\\*.LOG*',
-          '?:\\Users\\*\\*.TM.blf',
-          '?:\\Users\\*\\*.regtrans-ms',
-          '?:\\Users\\*\\*.LOG[1-9]'
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
         )
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
     )|
     |(
       (
@@ -95,19 +100,21 @@ condition: >
         or
         kevt.name = 'WriteFile'
       )
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches 
+      and file.name imatches 
         (
-          '?:\\Users\\*\\AppData\\*',
-          '?:\\Users\\*\\NTUSER.DAT*',
-          '?:\\Users\\*\\*.LOG*',
-          '?:\\Users\\*\\*.TM.blf',
-          '?:\\Users\\*\\*.regtrans-ms',
-          '?:\\Users\\*\\*.LOG[1-9]'
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
         )
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
     )|
     |(
       (
@@ -115,19 +122,21 @@ condition: >
         or
         kevt.name = 'CreateFile'
       )
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches 
+      and file.name imatches 
         (
-          '?:\\Users\\*\\AppData\\*',
-          '?:\\Users\\*\\NTUSER.DAT*',
-          '?:\\Users\\*\\*.LOG*',
-          '?:\\Users\\*\\*.TM.blf',
-          '?:\\Users\\*\\*.regtrans-ms',
-          '?:\\Users\\*\\*.LOG[1-9]'
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
         )
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
     )|
 
 output: |
