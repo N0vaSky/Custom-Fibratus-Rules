@@ -19,8 +19,6 @@ references:
 condition: >
   open_file 
     and 
-  kevt.pid != 4
-    and
   file.name imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
     and
   (
@@ -43,8 +41,6 @@ condition: >
         'pwsh.exe',
         'cmd.exe'
       )
-      or
-    pe.is_trusted = false
   )
     and
   not ps.exe imatches
