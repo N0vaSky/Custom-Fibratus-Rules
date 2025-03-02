@@ -41,7 +41,8 @@ condition: >
           'wininit.exe',
           'winlogon.exe',
           'explorer.exe',
-          'System'
+          'System',
+          'dllhost.exe'
         )
       )
       and not ps.exe imatches (
