@@ -1,0 +1,99 @@
+name: Ransomware In Progress - Memory-to-File Post-Overwrite
+id: 1e1350b5-4562-4515-b3bd-fcd7db52dd13
+version: 1.0.0
+description: Detects memory-to-file post-overwrite with optional rename/delete/create, typical of Cerber.
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - file-encryption
+  - cerber
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+  - https://github.com/rabbitstack/fibratus
+
+condition: >
+  sequence
+    maxspan 15ms
+    by file.object
+
+    |(
+      kevt.name = 'CreateFile'
+      and file.operation = 'OPEN'
+      and file.status = 'Success'
+
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+
+      and not (
+        ps.name in (
+          'OneDrive.exe',
+          'Dropbox.exe',
+          'GoogleDriveFS.exe',
+          'BoxSync.exe',
+          'BackupService.exe',
+          'SafeBackup.exe'
+        )
+      )
+    )|
+    |(
+      kevt.name = 'ReadFile'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+    )|
+    |(
+      kevt.name = 'WriteFile'
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+    )|
+    |(
+      kevt.name = 'WriteFile'
+      and file.io.size > 0
+      and file.name imatches '?:\\Users\\*'
+      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and not file.name imatches '?:\\Windows\\*'
+      and not file.name imatches '?:\\Program Files*'
+      and not file.name imatches '?:\\ProgramData\\*'
+    )|
+    |(
+      (
+        kevt.name = 'RenameFile'
+      )
+      or
+      (
+        kevt.name = 'FileDelete'
+      )
+      or
+      (
+        kevt.name = 'FileCreate'
+      )
+    )|
+
+output: |
+  Memory-To-File Post-Overwrite by %ps.name on %file.name:
+  open/read/write twice, then rename/delete/create.
+
+severity: critical
+action:
+  - name: kill
+
+min-engine-version: 2.0.0

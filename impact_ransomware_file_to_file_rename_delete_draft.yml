@@ -1,0 +1,153 @@
+name: Ransomware In Progress - File-to-File with Rename and Delete
+id: cb3ec28b-0914-4f24-b84c-74185feecfba
+version: 1.0.0
+description: Detects opening an original file, creating/writing a new file, renaming the new file, then deleting the original.
+enabled: true
+
+labels:
+  tactic.id: TA0040
+  tactic.name: Impact
+  tactic.ref: https://attack.mitre.org/tactics/TA0040/
+  technique.id: T1486
+  technique.name: Data Encrypted for Impact
+  technique.ref: https://attack.mitre.org/techniques/T1486/
+
+tags:
+  - ransomware
+  - file-encryption
+
+references:
+  - https://attack.mitre.org/techniques/T1486/
+
+condition: >
+  sequence
+    maxspan 16ms
+    by ps.uuid
+
+    |(
+      (
+        image.signature.type = 'NONE'
+          or
+        image.signature.level = 'UNCHECKED'
+          or
+        pe.is_trusted = false
+      )
+        and
+      kevt.name = 'CreateFile'
+      and file.operation = 'OPEN'
+      and file.status = 'Success'
+      and file.name imatches 
+        (
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
+        )
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
+      and not ps.exe imatches '?:\\Program Files*'
+      and not (
+        ps.name in (
+          'OneDrive.exe',
+          'Dropbox.exe',
+          'BackupService.exe',
+          'GoogleDriveFS.exe',
+          'BoxSync.exe',
+          'SafeBackup.exe',
+          'explorer.exe'
+        )
+      )
+    )|
+
+    |(
+      kevt.name = 'CreateFile'
+      and file.operation = 'OPEN'
+      and file.status = 'Success'
+      and file.name imatches 
+        (
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
+        )
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
+    )|
+
+    |(
+      kevt.name = 'WriteFile'
+      and file.name imatches 
+        (
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
+        )
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
+    )|
+
+    |(
+      kevt.name = 'RenameFile'
+      and file.name imatches 
+        (
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
+        )
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
+    )|
+
+    |(
+      kevt.name = 'DeleteFile'
+      and file.name imatches 
+        (
+          '?:\\Users\\*\\Desktop\\*',
+          '?:\\Users\\*\\Documents\\*', 
+          '?:\\Users\\*\\Downloads\\*',
+          '?:\\Users\\*\\Pictures\\*'
+        )
+      and not file.name iendswith
+        (
+          'desktop.ini',
+          '.tmp',
+          '.lnk',
+          '.url',
+          '.ini'
+        )
+    )|
+
+output: |
+  File-to-file with rename and delete by %ps.name.
+
+severity: critical
+action:
+  - name: kill
+
+min-engine-version: 2.0.0
