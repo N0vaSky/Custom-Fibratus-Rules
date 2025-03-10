@@ -19,7 +19,7 @@ references:
 condition: >
   open_file 
     and 
-  file.name imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
+  file.path imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
     and
   (
     ps.name iin
