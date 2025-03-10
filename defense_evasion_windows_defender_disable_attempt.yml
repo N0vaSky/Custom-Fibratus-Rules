@@ -26,6 +26,9 @@ condition: >
   and (
     registry.path = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
     )
+  and (
+    registry.value = 1
+    )
 
 output: >
   **Windows Defender Tampering Detected! : If value = 1 then Defender is Disabled.**
