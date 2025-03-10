@@ -30,7 +30,7 @@ condition: >
   sequence
   maxspan 10m
     |create_file 
-      and file.name imatches
+      and file.path imatches
         (
           '?:\\Windows\\System32\\wow64log.dll',
           '?:\\Windows\\wbemcomn.dll',
@@ -58,7 +58,7 @@ condition: >
           'wininit.exe',
           'winlogon.exe'
         )
-    | by file.name
+    | by file.path
     |load_dll
       and not ps.name = 'RuntimeBroker.exe'
     | by image.name
