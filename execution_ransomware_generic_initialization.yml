@@ -51,12 +51,12 @@ condition: >
     |(
       kevt.name = 'CreateFile'
       and kevt.arg[create_options] icontains 'DIRECTORY_FILE'
-      and file.name imatches 'C:\\Windows'
+      and file.path imatches 'C:\\Windows'
     )|
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'IMAGE'
-      and file.name imatches '*\\wow64.dll'
+      and file.path imatches '*\\wow64.dll'
     )|
     |(
       kevt.name = 'EnumDirectory'
@@ -65,7 +65,7 @@ condition: >
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'IMAGE'
-      and file.name imatches (
+      and file.path imatches (
         '*\\kernel32.dll',
         '*\\KernelBase.dll'
       )
