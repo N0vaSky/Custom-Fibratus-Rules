@@ -35,7 +35,7 @@ references:
   - https://attack.mitre.org/techniques/T1572/
 
 condition: >
-  spawn_process
+  (spawn_process or open_process)
     and 
   (
     ps.name in ('cmd.exe', 'powershell.exe', 'pwsh.exe', 'bash.exe', 'sh.exe', 'ash.exe', 'bsh.exe', 'csh.exe', 
@@ -59,74 +59,67 @@ condition: >
     'StandardInput', 'StandardOutput', 'createProcess')
   )
     and 
-  not ps.parent.name in 
-    (
-      'services.exe',
-      'smss.exe', 
-      'wininit.exe',
-      'System',
-      'action1agent.exe',
-      'action1_agent.exe',
-      'taskhostw.exe',
-      'svchost.exe'
-    )
-    and 
-  not ps.parent.exe imatches 
-    (
-      '?:\\Windows\\WinSxS\\*',
-      '?:\\Program Files\\Windows Defender\\*',
-      '?:\\Windows\\Action1\\*',
+  not (
+    ps.parent.exe imatches (
+      '?:\\Windows\\System32\\services.exe',
+      '?:\\Windows\\System32\\smss.exe',
+      '?:\\Windows\\System32\\wininit.exe',
+      '?:\\Windows\\explorer.exe',
       '?:\\Windows\\System32\\taskhostw.exe',
       '?:\\Windows\\System32\\svchost.exe'
     )
-    and 
-  not ps.exe imatches 
-    (
-      '?:\\Windows\\Action1\\*',
-      '?:\\WINDOWS\\Action1\\scripts\\*'
+      or
+    ps.parent.exe imatches (
+      '?:\\Windows\\System32\\*.exe',
+      '?:\\Windows\\SysWOW64\\*.exe',
+      '?:\\Windows\\WinSxS\\*',
+      '?:\\ProgramData\\*'
     )
-    and 
-  not ps.cmdline icontains
-    (
-      'C:\\WINDOWS\\Action1\\scripts\\',
-      '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\'
+      or
+    ps.cmdline icontains (
+      'C:\\WINDOWS\\Action1\\',
+      'New-ItemProperty -Path HKLM:\\SOFTWARE\\',
+      '-WindowStyle Hidden -Command if',
+      'ExecutionPolicy Bypass -Command Get-'
     )
-    and 
-  not (
-    ps.cmdline imatches 
-      (
-        '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"',
-        '-WindowStyle Hidden -ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"'
-      )
-      and 
-    not ps.cmdline icontains 
-      (
-        'invoke-webrequest',
-        'DownloadString(',
-        'New-Object Net.WebClient',
-        'New-Object Net.Sockets.TCPClient',
-        'IEX(',
-        'Invoke-Expression'
-      )
-  )
-    and
-  not (
-    ps.name = 'powershell.exe'
-      and
-    ps.parent.name in ('wscript.exe', 'cscript.exe')
-      and
-    ps.parent.cmdline imatches '?:\\Users\\*\\AppData\\Local\\Temp\\*.vbs'
-  )
-    and
-  not ps.parent.exe imatches '?:\\Users\\*\\AppData\\Local\\Temp\\*.exe'
-    and
-  not (
-    ps.name = 'powershell.exe'
-      and
-    ps.cmdline icontains '-WindowStyle Hidden'
-      and
+      or
     (
-      ps.parent.name in ('taskhostw.exe', 'svchost.exe', 'services.exe')
+      ps.name = 'powershell.exe'
+        and
+      (
+        ps.cmdline icontains '-WindowStyle Hidden -Command ('
+          or
+        ps.cmdline icontains 'ExecutionPolicy Bypass -File "C:\\Windows\\'
+          or
+        ps.cmdline icontains ' -NonInteractive -Command "'
+      )
+    )
+      or
+    (
+      ps.name = 'powershell.exe'
+        and
+      ps.parent.exe imatches (
+        '?:\\Windows\\System32\\wscript.exe',
+        '?:\\Windows\\System32\\cscript.exe',
+        '?:\\Windows\\SysWOW64\\wscript.exe',
+        '?:\\Windows\\SysWOW64\\cscript.exe'
+      )
+        and
+      ps.parent.cmdline imatches '?:\\Users\\*\\AppData\\Local\\Temp\\*.vbs'
+    )
+      or
+    ps.parent.exe imatches '?:\\Users\\*\\AppData\\Local\\Temp\\*.exe'
+      or
+    (
+      ps.name = 'powershell.exe'
+        and
+      ps.cmdline icontains '-WindowStyle Hidden'
+        and
+      ps.parent.exe imatches (
+        '?:\\Windows\\System32\\taskhostw.exe',
+        '?:\\Windows\\System32\\svchost.exe',
+        '?:\\Windows\\System32\\services.exe'
+      )
     )
   )
 output: |
