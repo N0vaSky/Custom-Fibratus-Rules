@@ -33,8 +33,8 @@ condition: >
       and
     file.info.is_disposition_delete_file
       and
-    not file.name imatches '?:\\Windows\\SoftwareDistribution\\Download\\*'
-    | by file.name
+    not file.path imatches '?:\\Windows\\SoftwareDistribution\\Download\\*'
+    | by file.path
     |load_module
     | by image.name
 
