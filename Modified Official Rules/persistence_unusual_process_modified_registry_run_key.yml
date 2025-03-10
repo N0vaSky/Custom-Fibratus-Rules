@@ -20,7 +20,7 @@ condition: >
     and
   ps.exe imatches '?:\\Windows\\*'
     and
-  registry.key.name imatches registry_run_keys
+  registry.path imatches registry_run_keys
     and
     not
   ps.exe imatches
