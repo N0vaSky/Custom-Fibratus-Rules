@@ -35,7 +35,7 @@ references:
   - https://attack.mitre.org/techniques/T1572/
 
 condition: >
-  spawn_process 
+  spawn_process or open_process
     and 
   (
     ps.name in ('cmd.exe', 'powershell.exe', 'pwsh.exe', 'bash.exe', 'sh.exe', 'ash.exe', 'bsh.exe', 'csh.exe', 
