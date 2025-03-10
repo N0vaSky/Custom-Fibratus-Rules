@@ -31,12 +31,12 @@ condition: >
       and file.operation = 'OPEN'
       and file.status = 'Success'
 
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
+      and file.path imatches '?:\\Users\\*'
+      and not file.path imatches '?:\\Users\\*\\AppData\\*'
 
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and not file.path imatches '?:\\Windows\\*'
+      and not file.path imatches '?:\\Program Files*'
+      and not file.path imatches '?:\\ProgramData\\*'
 
       and not (
         ps.name in (
@@ -51,28 +51,28 @@ condition: >
     )|
     |(
       kevt.name = 'ReadFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and file.path imatches '?:\\Users\\*'
+      and not file.path imatches '?:\\Users\\*\\AppData\\*'
+      and not file.path imatches '?:\\Windows\\*'
+      and not file.path imatches '?:\\Program Files*'
+      and not file.path imatches '?:\\ProgramData\\*'
     )|
     |(
       kevt.name = 'WriteFile'
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and file.path imatches '?:\\Users\\*'
+      and not file.path imatches '?:\\Users\\*\\AppData\\*'
+      and not file.path imatches '?:\\Windows\\*'
+      and not file.path imatches '?:\\Program Files*'
+      and not file.path imatches '?:\\ProgramData\\*'
     )|
     |(
       kevt.name = 'WriteFile'
       and file.io.size > 0
-      and file.name imatches '?:\\Users\\*'
-      and not file.name imatches '?:\\Users\\*\\AppData\\*'
-      and not file.name imatches '?:\\Windows\\*'
-      and not file.name imatches '?:\\Program Files*'
-      and not file.name imatches '?:\\ProgramData\\*'
+      and file.path imatches '?:\\Users\\*'
+      and not file.path imatches '?:\\Users\\*\\AppData\\*'
+      and not file.path imatches '?:\\Windows\\*'
+      and not file.path imatches '?:\\Program Files*'
+      and not file.path imatches '?:\\ProgramData\\*'
     )|
     |(
       (
