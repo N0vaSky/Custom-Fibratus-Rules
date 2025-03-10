@@ -35,23 +35,23 @@ condition: >
     )|
     |(
       kevt.name = 'CreateFile'
-      and file.name imatches 'C:\\Windows' 
+      and file.path imatches 'C:\\Windows' 
       and kevt.arg[type] = 'Directory'
     )|  
     |(
       kevt.name = 'MapViewFile'
       and file.view.type = 'IMAGE' 
-      and file.name imatches 'C:\\Windows\\System32\\wow64*.dll'
+      and file.path imatches 'C:\\Windows\\System32\\wow64*.dll'
     )|
     |(  
       kevt.name = 'CreateFile'
-      and file.name imatches 'C:\\Users\\*\\Desktop\\' 
+      and file.path imatches 'C:\\Users\\*\\Desktop\\' 
       and kevt.arg[type] = 'Directory'
     )|
     |(
       kevt.name = 'MapViewFile'  
       and file.view.type = 'IMAGE'
-      and file.name imatches 'C:\\Windows\\SysWOW64\\*.dll'  
+      and file.path imatches 'C:\\Windows\\SysWOW64\\*.dll'  
     )|
 
 output: |
