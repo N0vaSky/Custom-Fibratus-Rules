@@ -26,7 +26,7 @@ condition: >
         or
         kevt.name = 'DeleteFile'
       )
-      and file.name imatches 
+      and file.path imatches 
         (
           '?:\\Users\\*\\Desktop\\*',
           '?:\\Users\\*\\Documents\\*', 
@@ -57,7 +57,7 @@ condition: >
     |(
       kevt.name = 'CreateFile'
       and file.operation in ('CREATE','OPEN')
-      and file.name imatches 
+      and file.path imatches 
         (
           '?:\\Users\\*\\Desktop\\*',
           '?:\\Users\\*\\Documents\\*', 
@@ -75,7 +75,7 @@ condition: >
     )|
     |(
       kevt.name = 'ReadFile'
-      and file.name imatches 
+      and file.path imatches 
         (
           '?:\\Users\\*\\Desktop\\*',
           '?:\\Users\\*\\Documents\\*', 
@@ -97,7 +97,7 @@ condition: >
         or
         kevt.name = 'WriteFile'
       )
-      and file.name imatches 
+      and file.path imatches 
         (
           '?:\\Users\\*\\Desktop\\*',
           '?:\\Users\\*\\Documents\\*', 
@@ -119,7 +119,7 @@ condition: >
         or
         kevt.name = 'CreateFile'
       )
-      and file.name imatches 
+      and file.path imatches 
         (
           '?:\\Users\\*\\Desktop\\*',
           '?:\\Users\\*\\Documents\\*', 
