@@ -51,7 +51,8 @@ condition: >
         '?:\\Program Files*\\Microsoft\\Edge\\Application\\msedge.exe',
         '?:\\Users\\*\\AppData\\Local\\Microsoft\\OneDrive\\OneDrive.exe',
         '?:\\Program Files\\Google\\Drive File Stream\\*\\GoogleDriveFS.exe',
-        '?:\\Users\\*\\AppData\\Local\\Dropbox\\Dropbox.exe'
+        '?:\\Users\\*\\AppData\\Local\\Dropbox\\Dropbox.exe',
+        '?:\\Device\\*\\*\\*\\Application\\msedge.exe'
      )
      or
    (pe.is_signed = true and pe.cert.subject contains 'Microsoft')
