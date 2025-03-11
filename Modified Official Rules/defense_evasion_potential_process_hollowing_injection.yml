@@ -35,6 +35,7 @@ condition: >
         '?:\\Program Files (x86)\\*.exe',
         '?:\\Users\\*\\AppData\\Local\\Programs\\Common\\OneDriveCloud\\taskhostw.exe'
       )
+      and not (ps.parent.name = 'powershell.exe' and ps.parent.cmdline imatches '*-File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"*')
     | by ps.child.uuid
     |unmap_view_of_section and file.view.size > 20000 and file.view.protection != 'READONLY' and (length(file.name) = 0 or not ext(file.name) = '.dll')| by ps.uuid
     |load_executable| by ps.uuid
