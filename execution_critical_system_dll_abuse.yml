@@ -1,6 +1,6 @@
 name: Malicious System DLL Abuse
 id: 845e2f1a-6f3d-42a1-9d3c-e148e5c88c2d
-version: 4.0.0
+version: 4.1.0
 description: |
   Detects malicious system DLL abuse patterns indicating potential system compromise (ransomware or malware).
   Focuses on fundamental behaviors seen across multiple threat types including DLL
@@ -43,7 +43,9 @@ condition: >
           'winlogon.exe',
           'explorer.exe',
           'System',
-          'MsMpEng.exe'
+          'MsMpEng.exe',
+          'SearchProtocolHost.exe',
+          'SearchIndexer.exe'
         )
       )
       and not ps.exe imatches (
