@@ -72,7 +72,7 @@ condition: >
         and
       kevt.arg[share_mask] = 'READ|WRITE'
         and
-      file.name imatches
+      file.path imatches
         (
           '?:\\Users\\*\\Documents\\*',
           '?:\\Users\\*\\Desktop\\*',

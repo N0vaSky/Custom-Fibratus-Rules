@@ -36,7 +36,7 @@ condition: >
       kevt.name = 'CreateFile'
       and file.operation = 'OPEN'
       and file.status = 'Success'
-      and file.name imatches 
+      and file.path imatches 
         (
           '?:\\Users\\*\\Desktop\\*',
           '?:\\Users\\*\\Documents\\*', 
@@ -69,7 +69,7 @@ condition: >
       kevt.name = 'CreateFile'
       and file.operation = 'OPEN'
       and file.status = 'Success'
-      and file.name imatches 
+      and file.path imatches 
         (
           '?:\\Users\\*\\Desktop\\*',
           '?:\\Users\\*\\Documents\\*', 
@@ -88,7 +88,7 @@ condition: >
 
     |(
       kevt.name = 'WriteFile'
-      and file.name imatches 
+      and file.path imatches 
         (
           '?:\\Users\\*\\Desktop\\*',
           '?:\\Users\\*\\Documents\\*', 
@@ -107,7 +107,7 @@ condition: >
 
     |(
       kevt.name = 'RenameFile'
-      and file.name imatches 
+      and file.path imatches 
         (
           '?:\\Users\\*\\Desktop\\*',
           '?:\\Users\\*\\Documents\\*', 
@@ -126,7 +126,7 @@ condition: >
 
     |(
       kevt.name = 'DeleteFile'
-      and file.name imatches 
+      and file.path imatches 
         (
           '?:\\Users\\*\\Desktop\\*',
           '?:\\Users\\*\\Documents\\*', 

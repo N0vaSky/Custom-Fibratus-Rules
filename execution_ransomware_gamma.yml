@@ -27,7 +27,7 @@ references:
 
 condition: >
       create_file
-      and file.name imatches 'C:\\Users\\*\\AppData\\Local\\Temp\\_MEI*\\*'
+      and file.path imatches 'C:\\Users\\*\\AppData\\Local\\Temp\\_MEI*\\*'
       and (
         file.name contains ('api-ms-win-core-') 
         or file.name contains ('api-ms-win-crt-')

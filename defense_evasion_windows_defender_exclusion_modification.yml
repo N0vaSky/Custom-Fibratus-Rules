@@ -24,9 +24,9 @@ condition: >
   (
     kevt.name in ('RegSetValue', 'RegDeleteValue')
     and (
-         registry.key.name contains 'Windows Defender\\Exclusions\\Paths\\'
-         or registry.key.name contains 'Windows Defender\\Exclusions\\Extensions\\'
-         or registry.key.name contains 'Windows Defender\\Exclusions\\Processes\\'
+         registry.path icontains 'Windows Defender\\Exclusions\\Paths\\'
+         or registry.path icontains 'Windows Defender\\Exclusions\\Extensions\\'
+         or registry.path icontains 'Windows Defender\\Exclusions\\Processes\\'
     )
     and ps.name = 'MsMpEng.exe'
   )

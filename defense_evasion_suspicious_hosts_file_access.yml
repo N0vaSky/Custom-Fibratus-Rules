@@ -19,7 +19,7 @@ references:
 condition: >
   open_file 
     and 
-  file.name imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
+  file.path imatches '?:\\Windows\\System32\\drivers\\etc\\hosts'
     and
   (
     ps.name iin
@@ -49,7 +49,8 @@ condition: >
       '?:\\Windows\\System32\\svchost.exe',
       '?:\\Windows\\System32\\MicrosoftEdgeUpdate.exe',
       '?:\\Program Files\\Windows Defender\\*',
-      '?:\\Users\\*\\AppData\\Local\\Programs\\VSCodium\\VSCodium.exe'
+      '?:\\Users\\*\\AppData\\Local\\Programs\\VSCodium\\VSCodium.exe',
+      '?:\\Users\\*\\AppData\\Local\\Programs\\Microsoft VS Code\\Code.exe'
     )
     and
   not ps.parent.exe imatches
