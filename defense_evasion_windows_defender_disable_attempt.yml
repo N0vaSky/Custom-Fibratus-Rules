@@ -24,13 +24,9 @@ condition: >
   and ps.name = 'MsMpEng.exe'
   and (
     registry.path = 'HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows Defender\\Real-Time Protection\\DisableRealtimeMonitoring'
-    or
-    registry.path contains 'Windows Defender'
     )
   and (
     registry.value = 1
-    or
-    registry.value icontains 'SECURITY_PRODUCT_STATE_SNOOZED'
     )
 
 output: >
