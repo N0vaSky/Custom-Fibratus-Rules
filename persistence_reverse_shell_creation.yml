@@ -1,6 +1,6 @@
 name: Reverse Shell Detection
 id: e74b8d1a-6a9d-4f8a-b1ef-2e24c9b3e9fc
-version: 4.1.0
+version: 4.2.0
 description: |
   Advanced detection of reverse shells across multiple languages and techniques including:
   - Traditional shell-based reverse connections (bash, cmd, powershell)
@@ -35,7 +35,7 @@ references:
   - https://attack.mitre.org/techniques/T1572/
 
 condition: >
-  spawn_process 
+  spawn_process
     and 
   (
     ps.name in ('cmd.exe', 'powershell.exe', 'pwsh.exe', 'bash.exe', 'sh.exe', 'ash.exe', 'bsh.exe', 'csh.exe', 
@@ -59,31 +59,20 @@ condition: >
     'StandardInput', 'StandardOutput', 'createProcess')
   )
     and 
-  not ps.parent.name in 
+  not ps.parent.exe in 
     (
-      'services.exe',
-      'smss.exe', 
-      'wininit.exe',
-      'System',
-      'action1agent.exe',
-      'action1_agent.exe',
-      'taskhostw.exe',
-      'svchost.exe'
-    )
-    and 
-  not ps.parent.exe imatches 
-    (
-      '?:\\Windows\\WinSxS\\*',
-      '?:\\Program Files\\Windows Defender\\*',
-      '?:\\Windows\\Action1\\*',
-      '?:\\Windows\\System32\\taskhostw.exe',
-      '?:\\Windows\\System32\\svchost.exe'
+      'C:\\Windows\\System32\\services.exe',
+      'C:\\Windows\\System32\\smss.exe', 
+      'C:\\Windows\\System32\\wininit.exe',
+      'C:\\Windows\\System32\\svchost.exe',
+      'C:\\Windows\\System32\\CompatTelRunner.exe',
+      'C:\\Windows\\System32\\taskhostw.exe'
     )
     and 
   not ps.exe imatches 
     (
-      '?:\\Windows\\Action1\\*',
-      '?:\\WINDOWS\\Action1\\scripts\\*'
+      'C:\\Windows\\Action1\\*',
+      'C:\\WINDOWS\\Action1\\scripts\\*'
     )
     and 
   not ps.cmdline icontains
@@ -91,44 +80,7 @@ condition: >
       'C:\\WINDOWS\\Action1\\scripts\\',
       '-ExecutionPolicy Bypass -File "C:\\WINDOWS\\Action1\\'
     )
-    and 
-  not (
-    ps.cmdline imatches 
-      (
-        '-ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"',
-        '-WindowStyle Hidden -ExecutionPolicy Bypass -File "?:\\Users\\*\\AppData\\Local\\Temp\\*.ps1"'
-      )
-      and 
-    not ps.cmdline icontains 
-      (
-        'invoke-webrequest',
-        'DownloadString(',
-        'New-Object Net.WebClient',
-        'New-Object Net.Sockets.TCPClient',
-        'IEX(',
-        'Invoke-Expression'
-      )
-  )
-    and
-  not (
-    ps.name = 'powershell.exe'
-      and
-    ps.parent.name in ('wscript.exe', 'cscript.exe')
-      and
-    ps.parent.cmdline imatches '?:\\Users\\*\\AppData\\Local\\Temp\\*.vbs'
-  )
-    and
-  not ps.parent.exe imatches '?:\\Users\\*\\AppData\\Local\\Temp\\*.exe'
-    and
-  not (
-    ps.name = 'powershell.exe'
-      and
-    ps.cmdline icontains '-WindowStyle Hidden'
-      and
-    (
-      ps.parent.name in ('taskhostw.exe', 'svchost.exe', 'services.exe')
-    )
-  )
+
 output: |
   Reverse Shell Activity Detected:
   Process Information:

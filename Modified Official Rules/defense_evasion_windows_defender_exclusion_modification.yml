@@ -1,0 +1,47 @@
+name: Windows Defender Exclusion Modification
+id: a1234567-89ab-cdef-0123-456789abcdef
+version: 1.0.0
+description: >
+  Detects modifications to Windows Defender exclusions.
+  The rule triggers when a registry event (RegSetValue or RegDeleteValue) modifies a key 
+  containing one of the Defender Exclusion paths (Paths, Extensions, or Processes) by MsMpEng.exe,
+  or when a CreateProcess event from MpCmdRun.exe contains both "MpPreference" 
+  and "-Exclusion" in the command line.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: "https://attack.mitre.org/tactics/TA0005/"
+  technique.id: T1562.001
+  technique.name: Impair Defenses - Disable or Modify Tools
+  technique.ref: "https://attack.mitre.org/techniques/T1562/001/"
+tags:
+  - windows defender
+  - defense evasion
+  - registry modification
+  - command line
+condition: >
+  (
+    kevt.name in ('RegSetValue', 'RegDeleteValue')
+    and (
+         registry.path icontains 'Windows Defender\\Exclusions\\Paths\\'
+         or registry.path icontains 'Windows Defender\\Exclusions\\Extensions\\'
+         or registry.path icontains 'Windows Defender\\Exclusions\\Processes\\'
+    )
+    and ps.name = 'MsMpEng.exe'
+  )
+  or
+  (
+    kevt.name = 'CreateProcess'
+    and ps.name in ('MpCmdRun.exe')
+    and kevt.arg[cmdline] contains 'MpPreference'
+    and kevt.arg[cmdline] contains '-Exclusion'
+  )
+output: >
+  **Windows Defender Exclusion Modification Detected!**
+  - **Registry Key:** %registry.key.name
+  - **Operation:** %kevt.name
+  - **Command Line:** %kevt.arg[cmdline]
+  - **Process:** %ps.name (PID: %ps.pid)
+  - **Potential Defense Evasion Activity Detected**
+min-engine-version: 2.0.0
