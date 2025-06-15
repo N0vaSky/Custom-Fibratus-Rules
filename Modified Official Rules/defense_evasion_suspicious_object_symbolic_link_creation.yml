@@ -56,4 +56,4 @@ output: >
   Suspicious object symbolic link %kevt.arg[target] created by process %ps.exe
 severity: high
 
-min-engine-version: 3.0.0
+min-engine-version: 2.4.0
