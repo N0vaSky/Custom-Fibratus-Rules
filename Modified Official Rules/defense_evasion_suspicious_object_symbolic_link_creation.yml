@@ -1,11 +1,9 @@
 name: Suspicious object symbolic link creation
 id: f9306355-1f5f-4a06-9779-195aa681db80
-version: 1.0.2
+version: 1.0.3
 description: |
-  Identifies the creation of the object symbolic link inside the object manager namespace
-  by untrusted or unusual processes.
-  Adversaries may exploit object symbolic links to trick system processes into executing
-  malicious payloads.
+  Identifies creation of symbolic links targeting critical system objects
+  by suspicious processes or execution contexts.
 labels:
   tactic.id: TA0005
   tactic.name: Defense Evasion
@@ -18,32 +16,44 @@ references:
   - https://www.elastic.co/kr/blog/detect-block-unknown-knowndlls-windows-acl-hardening-attacks-cache-poisoning-escalation
 
 condition: >
-  create_symbolic_link_object and kevt.pid != 4 
-    and 
-  (pe.is_signed = false or pe.is_trusted = false or ps.exe not imatches
+  create_symbolic_link_object and kevt.pid != 4
+    and
+  kevt.arg[target] imatches
     (
-      '?:\\ProgramData\\Microsoft\\Windows Defender\\*\\MsMpEng.exe',
-      '?:\\WINDOWS\\system32\\svchost.exe',
-      '?:\\Program Files\\*',
-      '?:\\Program Files (x86)\\*',
-      '?:\\Windows\\System32\\vmwp.exe',
-      '?:\\Windows\\System32\\spoolsv.exe',
-      '?:\\Windows\\System32\\csrss.exe',
-      '?:\\Windows\\System32\\fontdrvhost.exe',
-      '?:\\Windows\\System32\\dwm.exe',
-      '?:\\Windows\\System32\\ctfmon.exe',
-      '?:\\Windows\\System32\\taskhostw.exe',
-      '?:\\Windows\\System32\\winlogon.exe',
-      '?:\\Windows\\System32\\conhost.exe', 
-      '?:\\Program Files\\Intel\\*\\ipf_helper.exe', 
-      '?:\\Program Files (x86)\\Intel\\*\\ipf_helper.exe' 
+      '\\KnownDlls\\*',
+      '\\KnownDlls32\\*', 
+      '\\Security\\*',
+      '\\Device\\*'
     )
+    and
+  (
+    pe.is_signed = false
+      or
+    ps.name in script_interpreters
+      or
+    ps.parent.name in script_interpreters
+      or
+    ps.exe imatches
+      (
+        '?:\\Users\\*\\*',
+        '?:\\Windows\\Temp\\*',
+        '?:\\Temp\\*',
+        '?:\\ProgramData\\*'
+      )
   )
     and
   kevt.arg[target] not imatches '\\Sessions\\*\\AppContainerNamedObjects\\*'
+    and
+  ps.exe not imatches
+    (
+      '?:\\Windows\\System32\\svchost.exe',
+      '?:\\Windows\\System32\\services.exe',
+      '?:\\Windows\\System32\\lsass.exe',
+      '?:\\Windows\\System32\\csrss.exe'
+    )
 
 output: >
   Suspicious object symbolic link %kevt.arg[target] created by process %ps.exe
 severity: high
 
-min-engine-version: 2.4.0
+min-engine-version: 3.0.0
