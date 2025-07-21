@@ -29,12 +29,17 @@ condition: >
     registry.value = 1
     )
 
-output: >
+output: |
   **Windows Defender Tampering Detected! : If value = 1 then Defender is Disabled.**
   - **Process:** %ps.name (PID: %ps.pid)
   - **Command Line:** %kevt.arg[cmdline]
   - **Registry Key Modified:** %registry.key.name
   - **Potential Defense Evasion Activity Detected**
+
+  - Signature Status: %pe.is_signed
+  - Cert Subject: %pe.cert.subject
+  - Cert Issuer: %pe.cert.issuer
+  - Process is Modified?: %pe.is_modified
 
 severity: critical
 

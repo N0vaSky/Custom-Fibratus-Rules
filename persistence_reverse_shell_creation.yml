@@ -84,9 +84,14 @@ condition: >
 output: |
   Reverse Shell Activity Detected:
   Process Information:
-  - Name: %ps.name (PID: %ps.pid)
+
+  - Process Name: %ps.exe
   - Command Line: %ps.cmdline
-  - Process Path: %ps.exe
+
+  - Signature Status: %pe.is_signed
+  - Cert Subject: %pe.cert.subject
+  - Cert Issuer: %pe.cert.issuer
+  - Process is Modified?: %pe.is_modified
   
   Parent Process:
   - Name: %ps.parent.name (PPID: %ps.ppid)

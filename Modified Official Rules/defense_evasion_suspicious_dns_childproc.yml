@@ -1,0 +1,52 @@
+name: DNS Server spawning suspicious child processes
+id: f1a7c9e8-4b2d-4f3e-8a1b-2c3d4e5f6789
+version: 1.0.0
+description: |
+  Detects instances of the Domain Name System (DNS) Server spawning suspicious processes.
+  Execution of any other binary as a child process of the DNS Server should be considered
+  highly suspicious. A remote code execution vulnerability exists in Windows DNS servers
+  when they fail to properly handle requests.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1190
+  technique.name: Exploit Public-Facing Application
+  technique.ref: https://attack.mitre.org/techniques/T1190/
+  subtechnique.id: T1210
+  subtechnique.name: Exploitation of Remote Services
+  subtechnique.ref: https://attack.mitre.org/techniques/T1210/
+tags:
+  - dns
+  - remote code execution
+  - suspicious child process
+references:
+  - https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2020-1350
+  - https://thehackernews.com/2020/07/windows-dns-server-hacking.html
+
+condition: >
+  spawn_process
+    and
+  ps.parent.name = 'dns.exe'
+    and
+    not
+  ps.name in ('conhost.exe', 'werfault.exe', 'dns.exe')
+    and
+    not
+  ps.parent.exe imatches '?:\\*\\scripts\\gui\\dns\\bin\\x64\\*'
+
+output: |
+  (DNS) Server spawning suspicious child processes
+  Child Process Information:
+  - Name: %ps.name 
+  - Internal Name: %pe.file.name
+  - Command Line: %ps.cmdline
+  - Process Arguments: %ps.args
+  - Path: %ps.cwd
+  - Signature Status: %pe.is_signed
+  - Cert Subject: %pe.cert.subject
+  - Cert Issuer: %pe.cert.issuer
+  - Process is Modified?: %pe.is_modified
+severity: high
+min-engine-version: 2.0.0

@@ -1,0 +1,55 @@
+name: Suspicious Microsoft Office template
+id: c4be3b30-9d23-4a33-b974-fb12e17487a2
+version: 1.0.2
+description: |
+  Detects when attackers drop macro-enabled files in specific
+  folders to trigger their execution every time the victim user
+  opens an Office application.
+labels:
+  tactic.id: TA0006
+  tactic.name: Persistence
+  tactic.ref: https://attack.mitre.org/tactics/TA0006/
+  technique.id: T1137
+  technique.name: Office Application Startup
+  technique.ref: https://attack.mitre.org/techniques/T1137/
+  subtechnique.id: T1137.001
+  subtechnique.name: Office Template Macros
+  subtechnique.ref: https://attack.mitre.org/techniques/T1137/001/
+references:
+  - https://cyberint.com/blog/research/office-templates-and-globaldotname-a-stealthy-office-persistence-technique/
+
+condition: >
+  create_file
+    and
+  file.path imatches
+    (
+      '?:\\Users\\*\\AppData\\Roaming\\Microsoft\\Word\\Startup\\*',
+      '?:\\Users\\*\\AppData\\Roaming\\Microsoft\\Templates\\*.dotm',
+      '?:\\Users\\*\\AppData\\Roaming\\Microsoft\\Excel\\XLSTART\\*',
+      '?:\\Users\\*\\AppData\\Roaming\\Microsoft\\AddIns\\*',
+      '?:\\Users\\*\\AppData\\Roaming\\Microsoft\\Outlook\\*.otm'
+    )
+    and
+  ps.name not iin msoffice_binaries
+    and
+  ps.exe not imatches
+    (
+      '?:\\Program Files\\*.exe',
+      '?:\\Program Files (x86)\\*.exe'
+    )
+
+output: |
+  Office template %file.path created by suspicious process %ps.exe
+
+  Process Information:
+
+  - Process Name: %ps.name 
+  - Command Line: %ps.cmdline
+  - Parent Process: %ps.parent.name (PPID: %ps.ppid)
+
+  - Signature Status: %pe.is_signed
+  - Cert Subject: %pe.cert.subject
+  - Cert Issuer: %pe.cert.issuer
+  - Process is Modified?: %pe.is_modified
+
+min-engine-version: 2.4.0

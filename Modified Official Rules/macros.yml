@@ -1,0 +1,600 @@
+- macro: spawn_process
+  expr: kevt.name = 'CreateProcess'
+
+- macro: create_thread
+  expr: kevt.name = 'CreateThread'
+
+- macro: create_remote_thread
+  expr: create_thread and kevt.pid != 4 and kevt.pid != thread.pid
+
+- macro: open_process
+  expr: kevt.name = 'OpenProcess' and ps.access.status = 'Success'
+
+- macro: open_thread
+  expr: kevt.name = 'OpenThread' and thread.access.status = 'Success'
+
+- macro: open_remote_thread
+  expr: open_thread and kevt.pid != 4 and kevt.pid != kevt.arg[pid]
+
+- macro: write_file
+  expr: kevt.name = 'WriteFile'
+
+- macro: open_file
+  expr: kevt.name = 'CreateFile' and file.operation = 'OPEN' and file.status = 'Success'
+
+- macro: create_file
+  expr: kevt.name = 'CreateFile' and file.operation != 'OPEN' and file.status = 'Success'
+
+- macro: rename_file
+  expr: kevt.name = 'RenameFile'
+
+- macro: read_file
+  expr: kevt.name = 'ReadFile'
+
+- macro: delete_file
+  expr: kevt.name = 'DeleteFile'
+
+- macro: set_file_information
+  expr: kevt.name = 'SetFileInformation'
+
+- macro: query_registry
+  expr: kevt.name in ('RegQueryKey', 'RegQueryValue') and registry.status = 'Success'
+
+- macro: open_registry
+  expr: kevt.name = 'RegOpenKey' and registry.status = 'Success'
+
+- macro: load_module
+  expr: kevt.name = 'LoadImage'
+
+- macro: unload_module
+  expr: kevt.name = 'UnloadImage'
+
+- macro: set_value
+  expr: kevt.name = 'RegSetValue' and registry.status = 'Success'
+
+- macro: create_key
+  expr: kevt.name = 'RegCreateKey' and registry.status = 'Success'
+
+- macro: modify_registry
+  expr: ((set_value) or (create_key))
+
+- macro: send_socket
+  expr: kevt.name = 'Send'
+
+- macro: recv_socket
+  expr: kevt.name = 'Recv'
+
+- macro: connect_socket
+  expr: kevt.name = 'Connect'
+
+- macro: accept_socket
+  expr: kevt.name = 'Accept'
+
+- macro: set_thread_context
+  expr: kevt.name = 'SetThreadContext' and kevt.arg[status] = 'Success'
+
+- macro: virtual_alloc
+  expr: kevt.name = 'VirtualAlloc'
+
+- macro: virtual_free
+  expr: kevt.name = 'VirtualFree'
+
+- macro: map_view_file
+  expr: kevt.name = 'MapViewFile'
+
+- macro: unmap_view_file
+  expr: kevt.name = 'UnmapViewFile'
+
+- macro: map_view_of_section
+  expr: map_view_file and file.view.type in ('IMAGE', 'IMAGE_NO_EXECUTE', 'PAGEFILE')
+
+- macro: unmap_view_of_section
+  expr: unmap_view_file and file.view.type in ('IMAGE', 'IMAGE_NO_EXECUTE')
+
+- macro: duplicate_handle
+  expr: kevt.name = 'DuplicateHandle'
+
+- macro: create_handle
+  expr: kevt.name = 'CreateHandle'
+
+- macro: query_dns
+  expr: kevt.name = 'QueryDns'
+
+- macro: reply_dns
+  expr: kevt.name = 'ReplyDns'
+
+- macro: create_symbolic_link_object
+  expr: kevt.name = 'CreateSymbolicLinkObject' and kevt.arg[status] = 'Success'
+
+- macro: inbound_network
+  expr: >
+    (recv_socket or accept_socket)
+        and
+    ((net.sip != 0.0.0.0 or net.dip != 0.0.0.0) and (net.sip not in ('0:0:0:0:0:0:0:1', '::1') or net.dip not in ('0:0:0:0:0:0:0:1', '::1')) and not (cidr_contains(net.sip, '127.0.0.0/8') or cidr_contains(net.dip, '127.0.0.0/8')))
+  description: |
+    Detects inbound network traffic excluding source/destination loopback addresses/address spaces.
+
+- macro: outbound_network
+  expr: >
+    (send_socket or connect_socket)
+        and
+    (net.dip != 0.0.0.0 and net.dip not in ('0:0:0:0:0:0:0:1', '::1') and not cidr_contains(net.dip, '127.0.0.0/8', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16'))
+  description: |
+    Detects outbound network traffic excluding unspecified destination IP addresses,
+    loopback addresses, and IP addresses pertaining to the RFC1918 address space.
+
+- macro: load_driver
+  expr: >
+    (load_module and (image.name iendswith '.sys' or image.is_driver))
+      or
+    (create_handle and handle.type = 'Driver')
+  description: |
+    Detects the loading of the kernel driver. Image load events are published when
+    executable images, DLLs, or driver PE objects are loaded. On the contrary, we can
+    also detect loading of kernel driver by observing the object manager events and
+    watching for driver objects being created.
+
+- macro: unload_driver
+  expr: unload_image and (image.name iendswith '.sys' or image.is_driver)
+
+- macro: load_unsigned_module
+  expr: >
+    load_module and image.signature.type = 'NONE'
+  description: |
+    Detects when unsigned executable or DLL is loaded into process address space.
+    The module is considered as unsigned if it lacks the cert in the PE security
+    directory or the Authenticode hash is not present in any of the catalogs.
+
+- macro: load_executable
+  expr: >
+    load_module and (image.name iendswith '.exe' or image.is_exec)
+
+- macro: load_dll
+  expr: >
+    load_module and (image.name iendswith '.dll' or image.is_dll)
+
+- macro: load_unsigned_executable
+  expr: >
+    load_executable
+      and
+    image.signature.type = 'NONE'
+
+- macro: load_untrusted_executable
+  expr: >
+    load_executable
+      and
+    (image.signature.level = 'UNCHECKED' or image.signature.level = 'UNSIGNED')
+  description:
+    Detects when untrusted executable is loaded into process address space.
+
+- macro: load_untrusted_dll
+  expr: >
+    load_dll
+      and
+    (image.signature.level = 'UNCHECKED' or image.signature.level = 'UNSIGNED')
+  description:
+    Detects when untrusted DLL is loaded into process address space.
+
+- macro: load_unsigned_module
+  expr: >
+    load_module and image.signature.type = 'NONE'
+  description: |
+    Detects when unsigned executable or DLL is loaded into process address space.
+    The module is considered as unsigned if it lacks the cert in the PE security
+    directory or the Authenticode hash is not present in any of the catalogs.
+
+- macro: load_unsigned_dll
+  expr: >
+    load_dll and image.signature.type = 'NONE'
+  description: |
+    Detects when unsigned executable DLL is loaded into process address space.
+
+- macro: load_untrusted_module
+  expr: >
+    load_module
+      and
+    (image.signature.level = 'UNCHECKED' or image.signature.level = 'UNSIGNED')
+  description: |
+    Detects when untrusted executable or DLL is loaded into process address space.
+    Windows must verify the trust chain by following the certificates to a trusted
+    root certificate. If the trust chain is not satisfied, the module is considered
+    untrusted.
+
+- macro: load_unsigned_or_untrusted_module
+  expr: (load_unsigned_module) or (load_untrusted_module)
+  description: >
+    Detects when either unsigned or untrusted module is loaded into process address space.
+
+- macro: load_unsigned_or_untrusted_dll
+  expr: (load_unsigned_dll) or (load_untrusted_dll)
+  description: >
+    Detects when either unsigned or untrusted DLL is loaded into process address space.
+
+- macro: write_minidump_file
+  expr: >
+    create_file
+      and
+    (
+      file.extension iin
+      (
+        '.dmp',
+        '.mdmp',
+        '.dump'
+      )
+        or
+      is_minidump(file.path)
+    )
+  description: |
+    Detects a process writing the minidump file. Minidump files are used for crash
+    reporting as they contain a snapshot of the process' memory such as local variables
+    or heap objects. Processes can create minidump files by calling into the MiniDumpWriteDump()
+    function. This macro checks the well-known extensions of the minidump files as well as
+    the minidump signature.
+
+- macro: msoffice_binaries
+  list: [EXCEL.EXE, WINWORD.EXE, MSACCESS.EXE, POWERPNT.EXE, visio.exe, mspub.exe, fltldr.exe, eqnedt32.exe]
+
+- macro: web_browser_binaries
+  list: [
+    chrome.exe, firefox.exe, msedge.exe, iexplore.exe, opera.exe,
+    brave.exe, microsoftedge.exe, chromium.exe, safari.exe
+    ]
+
+- macro: web_browser_cred_stores
+  list: [
+    "?:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Default\\Network\\Cookies",
+    "?:\\Users\\*\\AppData\\Local\\Chrome\\User Data\\Default\\Login Data",
+    "?:\\Users\\*\\AppData\\Local\\Google\\Chrome\\User Data\\Local State",
+    "?:\\Users\\*\\Appdata\\Local\\Microsoft\\Windows\\WebCache\\WebCacheV0?.dat",
+    "?:\\Users\\*\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\*\\cookies.sqlite",
+    "?:\\Users\\*\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\*\\sigons.sqlite",
+    "?:\\Users\\*\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\*\\logins.json",
+    "?:\\Users\\*\\AppData\\Roaming\\Mozilla\\Firefox\\Profiles\\*\\key?.db",
+    ]
+
+- macro: executable_extensions
+  list: [.exe, .com, .scr]
+
+- macro: module_extensions
+  list: [.dll, .ocx, .cpl]
+
+- macro: vault_extensions
+  list: [.vcrd, .vpol]
+
+- macro: startup_locations
+  list: [
+    "?:\\Users\\*\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\*",
+    "?:\\ProgramData\\Microsoft\\Windows\\Start Menu\\Programs\\StartUp\\*",
+    ]
+  description: |
+    Contains default Startup folder paths. Adversaries exploit the Startup folder
+    to maintain persistence on the endpoint.
+
+- macro: registry_run_keys
+  list: [
+    "*\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\*",
+    "*\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnce\\*",
+    "*\\Software\\Microsoft\\Windows\\CurrentVersion\\RunOnceEx\\*",
+    "*\\Software\\Microsoft\\Windows\\CurrentVersion\\RunServices\\*",
+    "*\\Software\\Microsoft\\Windows\\CurrentVersion\\RunServicesOnce\\*",
+    "*\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Run\\*",
+    "*\\Software\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\\*",
+    "*\\Software\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Policies\\Explorer\\Run\\*",
+    ]
+  description: |
+    Contains wildcard patterns of commonly abused registry run keys.
+
+- macro: registry_persistence_keys
+  list: [
+    "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Userinit",
+    "HKEY_USERS\\*\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Windows\\Load",
+    "HKEY_USERS\\*\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Windows\\Run",
+    "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Windows\\Load",
+    "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Windows\\Run",
+    "HKEY_LOCAL_MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell",
+    "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell",
+    "HKEY_USERS\\*\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell",
+    "HKEY_USERS\\*\\Environment\\UserInitMprLogonScript",
+    "HKEY_USERS\\*\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Shell",
+    "HKEY_USERS\\*\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\Scripts\\Logoff\\Script",
+    "HKEY_USERS\\*\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\Scripts\\Logon\\Script",
+    "HKEY_USERS\\*\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\Scripts\\Shutdown\\Script",
+    "HKEY_USERS\\*\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\Scripts\\Startup\\Script",
+    "HKEY_USERS\\*\\SOFTWARE\\Microsoft\\Ctf\\LangBarAddin\\*\\FilePath",
+    "HKEY_USERS\\*\\SOFTWARE\\Microsoft\\Internet Explorer\\Extensions\\*\\Exec",
+    "HKEY_USERS\\*\\SOFTWARE\\Microsoft\\Command Processor\\Autorun",
+    "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Winlogon\\Shell",
+    "HKEY_CURRENT_USER\\Environment\\UserInitMprLogonScript",
+    "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Policies\\System\\Shell",
+    "HKEY_CURRENT_USER\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\Scripts\\Logoff\\Script",
+    "HKEY_CURRENT_USER\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\Scripts\\Logon\\Script",
+    "HKEY_CURRENT_USER\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\Scripts\\Shutdown\\Script",
+    "HKEY_CURRENT_USER\\SOFTWARE\\Policies\\Microsoft\\Windows\\System\\Scripts\\Startup\\Script",
+    "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Ctf\\LangBarAddin\\*\\FilePath",
+    "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Internet Explorer\\Extensions\\*\\Exec",
+    "HKEY_CURRENT_USER\\SOFTWARE\\Microsoft\\Command Processor\\Autorun",
+    "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\BootExecute",
+    "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\SetupExecute",
+    "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\Execute",
+    "HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\S0InitialCommand"
+   ]
+  description: |
+    Contains the patterns for the registry keys which are commonly abused for
+    gaining persistence on the compromised endpoint.
+
+- macro: script_interpreters
+  list: ["powershell.exe", "pwsh.exe", "cscript.exe", "wscript.exe", "mshta.exe", "cmd.exe"]
+
+- macro: startup_shell_folder_registry_keys
+  list: [
+    "HKEY_USERS\\*\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\\Startup",
+    "HKEY_USERS\\*\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders\\Startup",
+    "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders\\Startup",
+    "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders\\Startup",
+    "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\User Shell Folders\\Common Startup",
+    "HKEY_LOCAL_MACHINE\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Shell Folders\\Common Startup"
+   ]
+  description: |
+    Registry keys that permit setting up alternative Startup folder locations.
+
+- macro: potential_unwanted_software_publishers
+  list: [
+    "ADSMARKETO LLC", "FSPro Labs", "Comodo Security Solutions, Inc", "SoftPerfect Pty. Ltd.", "Famatech Corp.", "AnyDesk Software GmbH", "Level Software, Inc.", "AmidaWare LLC", "Superops Inc.", "Bomgar Corporation", "David Sparer", "Splashtop Inc.", "Pilixo Cloud Solutions", "Parallels International GmbH", "Mega Limited", "Zhou Huabing", "RealVNC Ltd", "IMPERO SOLUTIONS LIMITED", "MMSoft Design Ltd.", "ISL Online Ltd", "IDrive, Inc", "Instant Housecall", "uvnc bvba", "GLAVSOFT, OOO", "Devolutions Inc.", "Nanosystems S.r.l", "DWSNET OÜ", "Famatech Corp", "AOMEI International Network Limited", "Yakhnovets Denis Aleksandrovich IP", "NetSupport Ltd", "Atera Networks Ltd", "Techinline Limited", "Aeroadmin LLC", "Ammyy LLC", "DUC FABULOUS CO.,LTD", "AWERAY PTE. LTD.", "TeamViewer GmbH", "TeamViewer Germany GmbH", "Connectwise, LLC", "William Gustafson", "Global Media (Thailand) Co., Ltd", "Fahad Malik", "Ter-Osipov Aleksei Vladimirovich", "Fast Corporate LTD", "Fast Corporation LTD", "FAST CORPORATION LTD", "Golden Frog GmbH", "Restoro Ltd", "Apps Delivered Ltd", "Purple Skyline (Superior Media Ltd)", "Malware Protection Live", "Developer ID Application: ACCOUNTABLE2YOU, LLC (F6HPLE28AD)", "ACCOUNTABLE2YOU, LLC", "Robokid Technologies", "WorldSetup", "QuizScope", "Twenty Nine Tech Software LLC", "浙江诺诺网络科技有限公司", "Nuonuo Technology Co.,Ltd.", "Mindspark Interactive Network", "Mindspark Interactive Network, Inc.", "Direction Software Ltd.", "Ping Castle SAS", "PCVARK SOFTWARE PRIVATE LIMITED", "ClientConnect LTD", "Bitberry Software", "BITT LLC", "IT Kompaniya TOV", "Flipora", "Ideakee Inc", "Media Story (New Media Holdings Ltd)", "Smart PC Solutions, Inc.", "Current Method", "Reimage Limited", "Skyplayer", "CHIP Digital GmbH", "Beijing AmazGame Age Internet Technology Co. Ltd.", "Spigot, Inc.", "Pay-By-Ads Ltd", "GameZooks", "ZeoBIT LLC", "Jenkat Media, Inc", "Yontoo LLC", "Inspiring Market", "Acai Tech Ltd", "Total Pc", "PINWID LTD", "Hola Networks Ltd", "Hudson Exchange Group, LLC", "TMRG Inc.", "TMRG, Inc.", "Pokki", "Zugo Ltd", "inlane", "Jawego Partners LLC", "Garden Variety Media", "Speedbit", "Speed-Bit LTD", "PC DRIVERS HEADQUARTERS I, INC", "Asurvio, LP", "Beijing Skycenter Technology Limited", "Coast Sense", "ReSoft LTD.", "Sivensys.S.R.L", "Crawler Group LLC", "Crawler, LLC", "Smart Apps", "Media Codecs Interactive LLC", "FindRight", "Ilan Rambam", "Interesting Solutions", "Biznes IT TOV", "APN LLC", "Ask.com", "Cloud Backup Software Limited", "Performersoft LLC", "Digital Ignition LLC", "MicroNames Ltd.", "Rafi Colman", "Trusted Software ApS", "ROSTPAY", "WIN TUNEUP SOFTWARE LLP", "Local Weather LLC", "Awareness Technologies, Inc.", "IDRIX", "IDRIX SARL", "TERSER TUDE LTD", "Search Results, LLC", "Source Delivery (Alpha Criteria Ltd.)", "philandro Software GmbH", "Shanghai Zaihe Network Technology Co. Ltd", "Now Media Corp.", "AtuZi", "SweetIM Technologies Ltd", "OOO FODEL", "Gemius S.A.", "The Tor Project, Inc.", "The Tor Project, Inc", "Developer ID Application: The Tor Project, Inc (MADPSAYN6T),", "Chetvertoe pokolenie, OOO", "Jump Flip", "Frostwire, LLC", "IncrediMail Inc.", "Systweak Inc.", "Positive Finds", "Hefei Hejunzhengce Info Tech Co. Ltd.", "LLC CLEVEROAD IT", "Safe Installer", "We-Care.com", "Covenant Eyes, Inc.", "Quality Install (Alpha Criteria Ltd.)", "Via Advertising Group Limited", "Motion Apps", "DownloadShield", "Golden Dock", "Catalina Group Limited", "Andrew Ziem", "Kheifets Iliya Mikhailovich IP", "Browser Distribution Services Inc.", "Enter Voyage", "Developer ID Application: Devyani Sharma (Q58HTDVM2R)", "Devyani Sharma", "L0pht Holdings LLC", "Prompt Install  (Fried Cookie Ltd)", "Qingdao Ruanmei Network Technology Co.,Ltd.", "ELPRO INFORMATICA LTDA ME", "Xing Wang,", "Buy Online", "KeyFinder LTD", "ONE UP LTD.", "Chengdu Yijia Advertising Co. Ltd.", "Download Helper", "Goobzo LTD", "Minidigital Technology Co., Limited", "Quest Enaptive", "Valion Group, LLC", "Sail Machine", "Big Water Applications", "Limited", "TEFINCOM S.A.,", "TEFINCOM S.A.", "The Fastest Mouse Clicker for Windows", "Open Source Developer Masha Novedad", "Highlightly", "System Healer Tech Sp. Zo.o.", "Media Get LLC", "Protocol Labs, Inc.", "Inbox.com Inc", "Autokms", "ByELDI", "Joltlogic", "Genieo Innovation LTD", "SUPER TUNEUP TECHNOLOGIES LLP", "OpenCandy", "AZTEC MEDIA INC.", "neomedia", "Shanghai Yishen Network Technology Co. Ltd.", "Secure Installer Inc", "Somoto Ltd.", "ShopAtHome.com (Belcaro Group Inc.)", "Anhui Haiyang Software Technology Co., Ltd.", "Anhui Honour Network Technology Co., Ltd.", "Anhui Changsu Network Technology Co., Ltd.", "Anhui Nikola Electronics Technology Co., Ltd.", "GreenTree Applications srl", "BetterNet LLC", "上海广乐网络科技有限公司", "PriceMeter", "Joltid Ltd.", "Thinknice Co. Limited", "Buzzyard", "Inbox OOO", "Azureus Software Inc.", "Veriato Inc.", "AfterDawn Oy", "Keep-My-Search LTD", "Zhorn Software", "GMGP, LLC", "Elex do Brasil Participações Ltda", "北京布丁跳跳科技有限公司", "Omega Partners LTD", "Super PC Tools Limited", "Backup Software Limited", "Zongyao Qu", "Shopper-Pro (GOOBZO LTD)", "VoiceFive Networks, Inc.", "VoiceFive, Inc.", "Conduit Ltd.", "Solvusoft Corporation", " Installer Wizard", "Installer Wizard", "altonav", "PCKeeper Installer", "Popcorn Time", "Bonanza Deals", "Cherished Technology Limited", "Safer Technologies LLC", "Download Assistant", "MyAppsCloud", "Valid Applications", "Quality Criteria (Alpha Criteria Ltd.)", "SparksGen Limited", "Weather Tool", "Sami Offer", "KROMTECH ALLIANCE CORP.", "ArcadeTwist", "Arod Group (BrightCircle Investments Limited)", "Kirill Chermenin", "ABE Labs LTD", "SourceCom", "Weather Protector LLC", "SaveSense", "RadarSync", "Usoris Systems LLC", "Quality Funnel (Fried Cookie Ltd.)", "MY POP SHOP LTD", "Download Admin", "Syndacato", "Piriform Software Ltd", "Boxore OU", "shenZhen Thunder Networking Technologies Ltd.", "ShenZhen Thunder Networking Technologies Ltd.", "深圳市迅雷网络技术有限公司", "EpicPlay LLC", "BULLY UNITY LTD", "Amber Flow", "Solucoes e Suporte Informatica SC LTDA", "Compete Inc", "ShenZhen Enode Techology co .Ltd", "Visual Tools", "Bandoo Media Inc", "One System Care Limited", "Suining Qixi Advertising Media Co., Ltd.", "GOLD CLICK LIMITED", "Edge Essence", "SafeJKA SRL", "karatoh", "Alistair Young", "重庆重橙网络科技有限公司", "AgileMax (New Media Holdings Ltd.)", "IMINENT TECHNOLOGY SRL", "Iminent", "BitTorrent, Inc", "BitTorrent Inc", "BitTorrent, Inc.", "Care Fiercely", "Probit Software LTD", "Techyutils Software Private Limited", "TrueCrypt Foundation", "H&V Media Limited", "Marshmallow Sweet (Superior Media Ltd.)", "Trend Delivery", "File Validated", "Blisbury LLP", "Acute Angle Solutions Ltd.", "ClaraLabSoftware", "dobreprogramy sp. z o.o.", "Megalain Konstrakshn TOV", "Beijing Zhihuimen Techology co.,Ltd", "Tweakbit Pty Ltd", "Tweakbit Pty Ltd.", "Uniblue Systems", "Smart Applications", "Rainnd Inc", "First Query Ltd.", "Web Discover", "RightSurf", "DealPly Technologies Ltd", "MaxSpeedy (Fried Cookie Ltd.)", "Shanghai 2345 Mobile Technology Co., Ltd.", "Hue communication", "ROSTPAY LTD", "FTA APS", "Developer ID Application: Digital Ignition LLC (5DPYRBHEAR),", "Perion Network Ltd.", "Time Lapse Solutions", "载信软件（上海）有限公司", "Kuzyakov Artur Vyacheslavovich IP", "Kuzyakov Artur Vyacheslavovich", "Cloud Installer", "Advanced PC Care", "Doitmystyle", "Fun Web Products", "pc speedup pro", "Spoutly Inc", "Banner LLC", "Shuang Wu", "Coupons, Inc.", "Capital Intellect Inc.", "Capital Intellect, Inc.", "Yaron Kida", "Software Assistant", "Advertiso GmbH", "Air Software", "Xacti", "Softmaking srl", "Connector Quality (Fried Cookie Ltd.)", "BeFrugal.com (Capital Intellect Inc.)", "PC Utilities Software Limited", "SpringTech Ltd", "FunnelTop (Fried Cookie Ltd.)", "IT RESEARCH LLC", "Flyos", "Genieo Innovation Ltd.", "Cloud Software", "Adwill Communications Co. LTD.", "Installer Technology Co.", "드림소프트", "PHRASEFINDER", "INNOVATIVE DIGITAL TECHNOLOGIES LLC", "Tilf AB", "IAC Search and Media", "Frank Bohling", "Realistic Media Inc.", "Eclipse Media Inc.", "Blaze Media Inc.", "Drake Media Inc.", "Interlink Media Inc.", "Mathematical Applications", "Darwen Marketing Inc.", "Web Bar Media", "Riyue Tongxing Information Technology (Beijing) Co.,Ltd.", "Ultrareach Internet Corp.", "Slimware Utilities Holdings, Inc.", "Rational Thought Solutions", "berrybesearch", "Megabrowse", "DisplayTime Software Inc", "Access Plex", "clearspace", "BlueSprig Inc.", "Fast Installer (Install Manager Limited)", "Traditional Gear", "Sendori", "Mesaa", "OOO Mipko", "nordvpn s.a.", "Browser Distribution Services, Inc.", "Nir Sofer", "BULLY UNITY LTD", "Ghostery, Inc.", "utorrent", "bittorrent inc", "bittorrent, inc", "上海迈微软件科技有限公司", "Stax Digital LLC", "BEIJING QIYI CENTURY SCIENCE&TECHNOLOGY CO.,LTD.", "Better Cloud Solutions LTD", "Stremio (Smart Code OOD)", "Developer ID Application: ACCOUNTABLE2YOU, LLC (F6HPLE28AD)", "ACCOUNTABLE2YOU, LLC", "Wavesor Software", "PortSwigger Ltd", "Remote Utilities LLC", "OOO Mipko", "Cudo Ventures, Ltd.", "FleetDeck Inc", "航天信息股份有限公司", "SimpleHelp Ltd", "Arkane Systems", "SoftEther Corporation", "SEMPERIS INC.", "NoMachine S.a.r.l."
+    ]
+  description: |
+    Contains potentially unwanted software publishers and developers often associated
+    with bundleware, adware, remote access tools, and suspicious software packages.
+
+- macro: autorun_keys
+  list: [
+    "\\software\\microsoft\\office\\ test\\special\\perf", "\\control\\ panel\\desktop\\scrnsave.exe", "shellex\\contextmenuhandlers", "\\software\\classes\\allfilesystemobjects\\shellex\\contextmenuhandlers", "\\software\\classes\\clsid\\{083863f1-70de-11d0-bd40-00a0c911ce86}\\instance", "\\software\\classes\\clsid\\{7ed96837-96f0-4812-b211-f13c24117ed3}\\instance", "\\software\\classes\\clsid\\{abe3b9a4-257d-4b97-bd1a-294af496222e}\\instance", "\\software\\classes\\clsid\\{ac757296-3522-4e11-9862-c17be5a1767e}\\instance", "\\software\\classes\\directory\\background\\shellex\\contextmenuhandlers", "\\software\\classes\\directory\\shellex\\contextmenuhandlers", "\\software\\classes\\directory\\shellex\\copyhookhandlers", "\\software\\classes\\directory\\shellex\\dragdrophandlers", "\\software\\classes\\directory\\shellex\\propertysheethandlers", "\\software\\classes\\exefile\\shell\\open\\command\\(default)", "\\software\\classes\\filter", "\\software\\classes\\folder\\shellex\\columnhandlers", "\\software\\classes\\folder\\shellex\\contextmenuhandlers", "\\software\\classes\\protocols\\filter", "\\software\\classes\\protocols\\handler", "\\software\\microsoft\\active\\ setup\\installed\\ components", "\\software\\microsoft\\command\\ processor\\autorun", "\\software\\microsoft\\ctf\\langbaraddin", "\\software\\microsoft\\internet\\ explorer\\desktop\\components", "\\software\\microsoft\\internet\\ explorer\\explorer\\ bars", "\\software\\microsoft\\internet\\ explorer\\extensions", "\\software\\microsoft\\internet\\ explorer\\toolbar", "\\software\\microsoft\\internet\\ explorer\\urlsearchhooks", "\\software\\microsoft\\windows\\ nt\\currentversion\\drivers32", "\\software\\microsoft\\windows\\ nt\\currentversion\\image\\ file\\ execution\\ options", "\\software\\microsoft\\windows\\ nt\\currentversion\\terminal\\ server\\install\\software\\microsoft\\windows\\currentversion\\run", "\\software\\microsoft\\windows\\ nt\\currentversion\\terminal\\ server\\install\\software\\microsoft\\windows\\currentversion\\runonce", "\\software\\microsoft\\windows\\ nt\\currentversion\\terminal\\ server\\install\\software\\microsoft\\windows\\currentversion\\runonceex", "\\software\\microsoft\\windows\\ nt\\currentversion\\windows\\appinit_dlls", "\\software\\microsoft\\windows\\ nt\\currentversion\\windows\\load", "\\software\\microsoft\\windows\\ nt\\currentversion\\windows\\run", "\\software\\microsoft\\windows\\ nt\\currentversion\\winlogon\\appsetup", "\\software\\microsoft\\windows\\ nt\\currentversion\\winlogon\\ginadll", "\\software\\microsoft\\windows\\ nt\\currentversion\\winlogon\\notify", "\\software\\microsoft\\windows\\ nt\\currentversion\\winlogon\\savedumpstart", "\\software\\microsoft\\windows\\ nt\\currentversion\\winlogon\\shell", "\\software\\microsoft\\windows\\ nt\\currentversion\\winlogon\\system", "\\software\\microsoft\\windows\\ nt\\currentversion\\winlogon\\taskman", "\\software\\microsoft\\windows\\ nt\\currentversion\\winlogon\\uihost", "\\software\\microsoft\\windows\\ nt\\currentversion\\winlogon\\userinit", "\\software\\microsoft\\windows\\currentversion\\authentication\\credential\\ provider\\ filters", "\\software\\microsoft\\windows\\currentversion\\authentication\\credential\\ providers", "\\software\\microsoft\\windows\\currentversion\\authentication\\plap\\ providers", "\\software\\microsoft\\windows\\currentversion\\explorer\\browser\\ helper\\ objects", "\\software\\microsoft\\windows\\currentversion\\explorer\\sharedtaskscheduler", "\\software\\microsoft\\windows\\currentversion\\explorer\\shellexecutehooks", "\\software\\microsoft\\windows\\currentversion\\explorer\\shelliconoverlayidentifiers", "\\software\\microsoft\\windows\\currentversion\\group\\ policy\\scripts\\shutdown", "\\software\\microsoft\\windows\\currentversion\\group\\ policy\\scripts\\startup", "\\software\\microsoft\\windows\\currentversion\\policies\\explorer\\run", "\\software\\microsoft\\windows\\currentversion\\policies\\system\\shell", "\\software\\microsoft\\windows\\currentversion\\run", "\\software\\microsoft\\windows\\currentversion\\runonce", "\\software\\microsoft\\windows\\currentversion\\runonceex", "\\software\\microsoft\\windows\\currentversion\\shell\\ extensions\\approved", "\\software\\microsoft\\windows\\currentversion\\shellserviceobjectdelayload", "\\software\\policies\\microsoft\\windows\\control\\ panel\\desktop\\scrnsave.exe", "\\software\\policies\\microsoft\\windows\\system\\scripts\\logoff", "\\software\\policies\\microsoft\\windows\\system\\scripts\\logon", "\\software\\policies\\microsoft\\windows\\system\\scripts\\shutdown", "\\software\\policies\\microsoft\\windows\\system\\scripts\\startup", "\\software\\wow6432node\\classes\\clsid\\{083863f1-70de-11d0-bd40-00a0c911ce86}\\instance", "\\software\\wow6432node\\classes\\clsid\\{7ed96837-96f0-4812-b211-f13c24117ed3}\\instance", "\\software\\wow6432node\\classes\\clsid\\{abe3b9a4-257d-4b97-bd1a-294af496222e}\\instance", "\\software\\wow6432node\\classes\\clsid\\{ac757296-3522-4e11-9862-c17be5a1767e}\\instance", "\\software\\wow6432node\\classes\\directory\\shellex\\copyhookhandlers", "\\software\\wow6432node\\classes\\directory\\shellex\\dragdrophandlers", "\\software\\wow6432node\\classes\\directory\\shellex\\propertysheethandlers", "\\software\\wow6432node\\classes\\folder\\shellex\\columnhandlers", "\\software\\wow6432node\\microsoft\\active\\ setup\\installed\\ components", "\\software\\wow6432node\\microsoft\\command\\ processor\\autorun", "\\software\\wow6432node\\microsoft\\internet\\ explorer\\explorer\\ bars", "\\software\\wow6432node\\microsoft\\internet\\ explorer\\extensions", "\\software\\wow6432node\\microsoft\\internet\\ explorer\\toolbar", "\\software\\wow6432node\\microsoft\\windows\\ nt\\currentversion\\drivers32", "\\software\\wow6432node\\microsoft\\windows\\ nt\\currentversion\\image\\ file\\ execution\\ options", "\\software\\wow6432node\\microsoft\\windows\\ nt\\currentversion\\windows\\appinit_dlls", "\\software\\wow6432node\\microsoft\\windows\\currentversion\\explorer\\browser\\ helper\\ objects", "\\software\\wow6432node\\microsoft\\windows\\currentversion\\explorer\\sharedtaskscheduler", "\\software\\wow6432node\\microsoft\\windows\\currentversion\\explorer\\shellexecutehooks", "\\software\\wow6432node\\microsoft\\windows\\currentversion\\explorer\\shelliconoverlayidentifiers", "\\software\\wow6432node\\microsoft\\windows\\currentversion\\run", "\\software\\wow6432node\\microsoft\\windows\\currentversion\\runonce", "\\software\\wow6432node\\microsoft\\windows\\currentversion\\runonceex", "\\software\\wow6432node\\microsoft\\windows\\currentversion\\shell\\ extensions\\approved", "\\software\\wow6432node\\microsoft\\windows\\currentversion\\shellserviceobjectdelayload", "\\system\\currentcontrolset\\control\\bootverificationprogram\\imagepath", "\\system\\currentcontrolset\\control\\lsa\\authentication\\ packages", "\\system\\currentcontrolset\\control\\lsa\\notification\\ packages", "\\system\\currentcontrolset\\control\\lsa\\security\\ packages", "\\system\\currentcontrolset\\control\\networkprovider\\order", "\\system\\currentcontrolset\\control\\print\\monitors", "\\system\\currentcontrolset\\control\\securityproviders\\securityproviders", "\\system\\currentcontrolset\\control\\servicecontrolmanagerextension", "\\system\\currentcontrolset\\control\\session\\ manager\\bootexecute", "\\system\\currentcontrolset\\control\\session\\ manager\\execute", "\\system\\currentcontrolset\\control\\session\\ manager\\knowndlls", "\\system\\currentcontrolset\\control\\session\\ manager\\s0initialcommand", "\\system\\currentcontrolset\\control\\session\\ manager\\setupexecute", "\\system\\currentcontrolset\\control\\terminal\\ server\\wds\\rdpwd\\startupprograms", "\\system\\currentcontrolset\\services"
+    ]
+  description: |
+    Contains Windows registry keys commonly used by malware for persistence
+    and autorun mechanisms across the Windows system.
+
+- macro: bec_keywords
+  list: ["ach ", "bank", "forecast", "invoice", "legal", "payroll", "projections", "tax", "wetransfer", "wire", "workday"]
+  description: |
+    Contains keywords commonly found in Business Email Compromise (BEC) attacks
+    and financial fraud phishing campaigns.
+
+- macro: common_external_netconns
+  list: [
+    "cloudapp.azure.com", "www.intel.com", "certificates.intel.com", "ocsp2.globalsign.com", "ocsp.sectigo.com", "login.live.com", "winatp-gw-weu.microsoft.com", ".microsoft.com", ".windows.com", ".windows.net", ".cloudapp.net", ".l-msedge.net", ".a-msedge.net", "client-office365-tas.msedge.net", "evoke-windowsservices-tas.msedge.net", "status.thawte.com", "winatp-gw-cus.microsoft.com", "services.visualstudio.com", ".mcafee.com", "s.symcb.com", "s2.symcb.com", "s1.symcb.com", ".symcb.com", ".symcd.com", "rb.symcd.com", "s.symcd.com", "sv.symcd.com", "ocsp.digicert.com", "crl3.digicert.com", "ctldl.windowsupdate.com", "ocsp.usertrust.com", "ocsp.comodoca.com", "crl.usertrust.com", "pac.zscaler.com", "crl.comodoca.com", "ocsp.verisign.com", "crl.verisign.com", "crl.geotrust.com", "ocsp.geotrust.com", "ocsp.ssl.com", "ocsp.godaddy.com", "crl.godaddy.com", "certificates.godaddy.com", "crl.microsoft.com", "ocsp.microsoft.com", "oneocsp.microsoft.com", "www.msftncsi.com", "office365.com", "nexus.officeapps.live.com", ".officeapps.live.com", "login.microsoftonline.com", "autodiscover-s.outlook.com", "officeredir.microsoft.com", "weather.service.msn.com", "service-now.com", "ocsp.entrust.net", "download.windowsupdate.com", "webdefence.global.blackspider.com", "global.blackspider.com", "cs9.wac.phicdn.net", "cs11.wpc.v0cdn.net", "cds.p9u4n2q3.hwcdn.net", "ecs.office.com", "nexusrules.officeapps.live.com", ".office.com", "settingsfd-geo.trafficmanager.net", ".trafficmanager.net", "ocsp.starfieldtech.com", ".data.microsoft.com", "cdp.microsoft.com", "aadg.akadns.net", "hybrid-web.global.blackspider.com", "akamaiedge.net"
+    ]
+  description: |
+    Contains legitimate external network connections commonly seen in enterprise
+    environments to reduce false positives.
+
+- macro: content_providers
+  list: [
+    "my.atlassian.com", "cdn.atlassian.com", "gist.github.com", "raw.githubusercontent.com", "gist.githubusercontent.com", "filefactory.com", "fileden.com", "mediafire.com", "4shared.com", "4sync.com", "tmhk.it", "echo.tmhk.it", "download.drp.su", "update.drp.su", "paste.ee", "rghost.net", ".weebly.com"
+    ]
+  description: |
+    Contains domains commonly used for hosting and sharing content that may be
+    used by attackers for staging malware or exfiltrating data.
+
+- macro: susp_uncommon_tlds
+  list: [".date", ".archi", ".cf", ".ga", ".gq", ".ml", ".tk", ".cc", ".cx", ".ws", ".mp", ".st", ".work", ".surf", ".cfd", ".cam", ".casa", ".top", ".link", "cyou", ".fit", ".live"]
+  description: |
+    Contains suspicious and uncommon top-level domains frequently used in
+    malicious campaigns and phishing attacks.
+
+- macro: common_ransomware_extensions
+  list: [
+    ".akira", ".avos", ".axx", ".CBhwKBgQD", ".ccc", ".cerber", ".cerber3", "crptrgr", ".cry", ".cryp1", ".crypt", ".cryptowall", ".crypz", ".cuba", "evillock", ".exx", ".ezz", ".file0locked", ".FOG", ".FFOG", ".FLOCKED", ".fucked", ".lockbit", ".locked", ".lockfile", ".locklock", ".locky", ".lol!", ".mallox", ".micro", ".odin", ".onion", ".osiris", ".powerranges", ".sage", ".rhysida", ".ryk", ".vyilspjlf", ".wallet", ".wasted", ".wcry", ".zcrypt", ".zepto", ".zzzzz", ".locked_for_lockbit", ".8base", "._locked", ".royal", ".blacksuit", ".lynx", ".safepay", ".termite", ".dragonforce_encrypted", ".Interlock", ".!NT3R10CK", ".!n+erlock"
+    ]
+  description: |
+    Contains file extensions commonly used by ransomware families to mark
+    encrypted files during attacks.
+
+- macro: evil_posh_modules
+  list: [
+    "invoke-loadassembly", "Invoke-ShareFinder", "Invoke-PrivescCheck", "Invoke-InternalMonologue", "invoke-dllinjection", "invoke-shellcode", "invoke-wmicommand", "get-timedscreenshot", "invoke-credentialinjection", "invoke-ninjacopy", "volumeshadowcopytools", "invoke-userhunter", "find-gpolocation", "invoke-aclscanner", "invoke-downgradeaccount", "get-serviceunquoted", "get-servicefilepermission", "get-servicepermission", "invoke-serviceabuse", "install-servicebinary", "get-regautologon", "get-vulnautorun", "get-vulnschtask", "get-unattendedinstallfile", "get-webconfig ", "get-webconfig.ps1", "get-applicationhost", "get-regalwaysinstallelevated", "get-unconstrained", "add-regbackdoor", "add-scrnsavebackdoor", "gupt-backdoor", "invoke-adsbackdoor", "enabled-duplicatetoken", "invoke-psuacme", "remove-update", "check-vm", "get-lsasecret", "get-passhashes", "show-targetscreen", "port-scan", "invoke-poshrathttp", "invoke-powershelltcp", "invoke-powershellwmi", "add-exfiltration", "add-persistence", "do-exfiltration", "start-captureserver", "invoke-dllinjection", "invoke-reflectivepeinjection", "invoke-shellcode", "get-chromedump", "get-clipboardcontents", "get-foxdump", "get-indexeditem", "get-keystrokes", "get-screenshot", "invoke-inveigh", "invoke-netripper", "out-minidump", "invoke-egresscheck", "invoke-postexfil", "invoke-psinject", "invoke-runas", "mailraider", "new-honeyhash", "set-macattribute", "invoke-dcsync", "invoke-mimikatz", "invoke-powerdump", "invoke-tokenmanipulation", "exploit-jboss", "invoke-thunderstruck", "invoke-voicetroll", "set-wallpaper", "invoke-inveighrelay", "invoke-psexec", "invoke-sshcommand", "get-securitypackages", "install-ssp", "invoke-backdoorlnk", "powerbreach", "get-gpppassword", "get-sitelistpassword", "get-system", "invoke-bypassuac", "invoke-tater", "invoke-wscriptbypassuac", "powerup", "powerview", "get-rickastley", "find-fruit", "http-login", "find-trusteddocuments", "invoke-paranoia", "invoke-winenum", "invoke-arpscan", "invoke-portscan", "invoke-reversednslookup", "invoke-smbscanner", "invoke-mimikittenz", "get-addbaccount", "get-adreplaccount", "invoke-memorynps", "-shellcode", "invoke-kickass", "discover-psinterestingservices", "discover-psmsexchangeservers", "discover-psmssqlservers", "find-psserviceaccounts", "get-domainkerberospolicy", "get-psadforestinfo", "get-psadforestkrbtgtinfo", "powercat", "Invoke-Sharpcradle", "Invoke-WCMDump", "mimiload", "SessionGopher", "Kittielocal", "SharpCloud", "Obfuskittiedump", "Invoke-SecretDecrypt", "Invoke-SecretStealer", "trollamsi"
+    ]
+  description: |
+    Contains malicious PowerShell modules commonly used by attackers for
+    privilege escalation, lateral movement, and persistence.
+
+- macro: invoke_webrequest
+  list: ["curl", "Invoke-WebRequest", "iwr", "wget"]
+  description: |
+    Contains PowerShell and command-line utilities commonly used for downloading
+    content from the internet in attack scenarios.
+
+- macro: lolbin_strings
+  list: ["powershell", "rundll32", "regsvr32", "installutil", "regasm", "regsvcs", "cmd", "cscript", "wscript"]
+  description: |
+    Contains Living Off The Land (LOL) binaries commonly abused by attackers
+    to execute malicious code while evading detection.
+
+- macro: ip_lookup_services
+  list: [
+    "2ip.ru", "api.ip.sb", "api.ipify.org", "api.wipmania.com", "checkip.amazonaws.com", "checkip.dyndns.org", "curlmyip.com", "db-ip.com", "eth0.me", "geoplugin.net", "icanhazip.com", "ident.me", "ifconfig.me", "ip138.com", "ip-api.com", "ip.anysrc.net", "ip2location.com", "ipapi.co", "ipapi.com", "ipdata.co", "ipecho.net", "ipgeolocation.com", "ipgeolocation.io", "ipgeolocationapi.com", "ipinfo.io", "iplocation.net", "iplogger.org", "ipstack.com", "myexternalip.com", "myip.opendns.com", "whatismyip.com", "whatismyipaddress.com", "wtfismyip.com", "myip.expert", "api.2ip.ua"
+    ]
+  description: |
+    Contains IP lookup services commonly used by malware to determine external
+    IP addresses and geolocate victims.
+
+- macro: linux_shells
+  list: ["sh", "ksh", "zsh", "bash", "dash", "rbash", "fish", "csh", "tcsh", "ion", "eshell", "rc", "scsh", "xonsh", "oh", "elvish", "busybox"]
+  description: |
+    Contains Linux/Unix shell interpreters commonly targeted or used by
+    attackers for command execution and persistence.
+
+- macro: linux_system_recon
+  list: ["uname", "ps", "id", "who", "whoami", "last", "lastlog", "arch", "hostname", "ifconfig", "netstat", "lsof"]
+  description: |
+    Contains Linux/Unix system reconnaissance commands commonly used by
+    attackers to gather information about compromised systems.
+
+- macro: windows_system_recon
+  list: ["systeminfo", "netstat", "ipconfig", "hostname", "net1", "net", "nltest", "tasklist"]
+  description: |
+    Contains Windows system reconnaissance commands commonly used by
+    attackers to gather information about compromised systems.
+
+- macro: office_binaries
+  list: [
+    "winword.exe", "excel.exe", "powerpnt.exe", "mspub.exe", "visio.exe", "Microsoft PowerPoint.app", "Microsoft Word.app", "Microsoft Excel.app", "Microsoft PowerPoint", "Microsoft Word", "Microsoft Excel", "wordpad.exe", "outlook.exe", "olk.exe", "Microsoft Outlook", "Outlook"
+    ]
+  description: |
+    Contains Microsoft Office and other document processing applications
+    commonly targeted for macro-based attacks.
+
+- macro: paste_sites
+  list: [
+    "anotepad.com", "pastebin.mozilla.org", "0bin.link", "0bin.net", "commie.io", "ghostbin.com", "hastebin.com", "jpst.it", "justpaste.it", "kl1p.com", "paste2.org", "pastebin.com", "pasted.co", "slexy.org", "zerobin.net", "paste.scratchbook.ch", "bitty.site", "ghostbin.co", "paste.ee", "anonpaste.co", "transfer.sh", "rentry.co", "paste.bingner.com", "paste.c-net.org", "sshx.io", "oshi.at"
+    ]
+  description: |
+    Contains paste sites commonly used by attackers for hosting malicious
+    code, sharing stolen data, or communicating with victims.
+
+- macro: phishing_lures
+  list: ["accounting", "claim_letter", "compensation_reject", "complaint_letter", "contract", "contractcopy", "invoice", "payment", "Your File Is Ready To Download"]
+  description: |
+    Contains common phishing lure keywords found in malicious email
+    attachments and social engineering attacks.
+
+- macro: ransomware_readme_extensions
+  list: [
+    ".readme", ".readtheinstructions", ".open_readme.txt.ke3q", ".ge0l0gic_readme.txt", ".iaufhhhhfiles_back_pls_read.html", ".iaufhhhfiles_back_pls_read.html", ".wowreadfordecry", "readme_decryptor.txt", ".readme_txt", ".read_to_txt_file.yyto", ".wowreadfordecryp", "_readme.hta", "_readme.jpg", ".read_me.txt", ".blacksuit.txt"
+    ]
+  description: |
+    Contains file extensions commonly used by ransomware families for
+    ransom note files that contain payment instructions.
+
+- macro: ransomware_readme_filenames
+  list: [
+    "CBhwKBgQD.README.txt", "!!!readme!!!help!!!.txt", "#decp_readme#.rtf", "hildacryptreadme.html", "ryukreadme.html", "ryukreadme.txt", "sguard-readme.txt", "gnncry_readme.txt", "#_#readme#_#.rtf", "read_me.mars", "_crypted_readme.html", "readme-prodecryptor@gmail.com.txt", "read_me.cube", "readme_locked.txt", "readme-now.txt", "---readme---.txt", "clopreadme.txt", "!!!read_it!!!.txt", "readme_restore_files.txt", "!readme_grhan!.rtf", "!!!readmetodecrypt.txt", "#readme_gman#.rtf", "!readme_gman!.rtf", "read_to_decrypt.html", "#newrar_readme#.rtf", "you_must_read_me.rtf", "readme_decryptor.txt", "read__it.txt", "spreader_x86.dll", "read_me_help.png", "read_me_help.txt", "matrix-readme.rtf", "readme-matrix.rtf", "_read_me_for_decrypt.txt", "read_this_file_1.txt", "important_read_me.txt", "read_me_asap.txt", "if you want to get all your files back, please read this.txt", "readme_important.txt", "!read.htm", "if_you_want_to_get_all_your_files_back_please_read_this.txt", "readme_for_decrypt.txt", "read_decrypt_files.txt", "read me for help thanks.txt", "read_me.html", "!please read me!.txt", "@please_read_me@.txt", "read_it_for_get_your_file.txt", "!!! read this - important !!!.txt", "009-read-for-decccc-filesss.html", "read me about decryption.txt", "!!!read_to_unlock!!!.txt", "read_me_!.txt", "if_want_files_back_pls_read.html", "please-readit-if_you-want.html", "read-read-read.html", "001-read-for-decrypt-files.html", "rans0m_n0te_read_me.txt", "try-read-me-to-dec.html", "read_me_to_decrypt_you_informa.jjj", "read@my.txt", "000-please-read-we-help.html", "_readme_.hta", "###-read-for-hellpp.html", "readme_liesmich_encryptor_raas.txt", "readme_to_recure_your_files.txt", "readme!!!.txt", "# readme.hta", "readme how to decrypt your files.html", "decrypt_readme.txt.readme", "read_this_file.txt", "de_crypt_readme.txt", "de_crypt_readme.html", "de_crypt_readme.bmp", "read me (how decrypt) !!!!.txt", "read_this_to_decrypt.html", "readme_how_to_unlock.txt", "readme_how_to_unlock.html", "read me for decrypt.txt", "read if you want your files back.html", "kryptolocker_readme.txt", "important.readme", "important read me.txt", "hacked_read_me_to_decrypt_files.html", "decrypt_readme1.txt", "readthisnow!!!.txt", "iamreadytopay.txt", "decrypt_readme.txt", "readdecryptfileshere.txt", "encryptor_raas_readme_liesmich.txt", "GET_YOUR_FILES_BACK.txt", "HOW TO BACK FILES.TXT", "how_to_decrypt.hta", "readme.blacksuit.txt", "readme_safepay.txt", "How To Restore Your Files.txt", "!__README__!.txt"
+    ]
+  description: |
+    Contains common ransomware ransom note filenames used to deliver
+    payment instructions to victims.
+
+- macro: url_shorteners
+  list: [
+    "bit.do", "bit.ly", "goo.gl", "ow.ly", "cutt.ly", "is.gd", "demo.polr.me", "tinyurl.com", "snip.ly", "po.st", "tr.im", "smarturl.it", "hyperurl.co", "snip.li", "sh.st", "shorturl.at", "mrw.so", "iplogger.com", "iplogger.org", "iplogger.ru", "2no.co", "yip.su", "rebrand.ly"
+    ]
+  description: |
+    Contains URL shortening services commonly used by attackers to hide
+    malicious destinations and evade URL-based security controls.
+
+- macro: webfile_extensions
+  list: [".php", ".jsp", ".jspx", ".js", ".jsx", ".asp", ".aspx", ".ashx", ".asmx", ".asax", ".cfm", ".shtml"]
+  description: |
+    Contains web file extensions that may be used for web shells or
+    server-side script execution in compromised web applications.
+
+- macro: win_script_extensions
+  list: [".js", ".vbs", ".bat", ".cmd", ".wsf", ".vbe", ".jse", ".vba", ".ps1", ".psm1"]
+  description: |
+    Contains Windows script file extensions commonly used by malware
+    for initial execution and persistence mechanisms.
+
+- macro: windows_pe_extensions
+  list: [".cpl", ".pif", ".paf", ".scr", ".exe", ".dll", ".sys", ".ocx"]
+  description: |
+    Contains Windows Portable Executable file extensions that may be
+    used for malware distribution and execution.
+
+- macro: windows_extpath_extensions
+  list: [".com", ".exe", ".bat", ".cmd", ".vbs", ".vbe", ".js", ".jse", ".wsf", ".wsh", ".msc"]
+  description: |
+    Contains Windows executable path extensions recognized by the system
+    PATH environment variable for direct execution.
+
+- macro: windows_appwhitelist_bypass
+  list: [
+    "csi.exe", "dnx.exe", "kd.exe", "rcsi.exe", "csc.exe", "bginfo.exe", "cdb.exe", "regsvr32.exe", "rundll32.exe", "wscript.exe", "mshta.exe", "cscript.exe", "msxsl.exe"
+    ]
+  description: |
+    Contains Windows binaries commonly abused to bypass application
+    whitelisting and execute unsigned code.
+
+- macro: windows_browsers
+  list: [
+    "chrome.exe", "firefox.exe", "safari.exe", "opera.exe", "iexplore.exe", "microsoftedge.exe", "microsoftedgecp.exe", "browser_broker.exe", "msedge.exe", "msedgewebview2.exe", "brave.exe", "waterfox.exe", "vivaldi.exe"
+    ]
+  description: |
+    Contains Windows web browser executables commonly targeted for
+    credential theft and browser-based attacks.
+
+- macro: windows_system_processes
+  list: [
+    "winlogon.exe", "services.exe", "explorer.exe", "lsm.exe", "svchost.exe", "lsass.exe", "userinit.exe", "smss.exe", "taskhost.exe", "wininit.exe", "ntoskrnl.exe", "csrss.exe", "dllhost.exe"
+    ]
+  description: |
+    Contains critical Windows system processes commonly targeted for
+    process injection and impersonation attacks.
+
+- macro: win_world_writable_directories
+  list: [
+    "\\windows\\system32\\microsoft\\crypto\\rsa\\machinekeys\\", "\\windows\\system32\\tasks_migrated\\microsoft\\windows\\pla\\system\\", "\\windows\\syswow64\\tasks\\microsoft\\windows\\pla\\system\\", "\\windows\\debug\\wia\\", "\\windows\\system32\\tasks\\", "\\windows\\syswow64\\tasks\\", "\\windows\\tasks\\", "\\windows\\registration\\crmlog\\", "\\windows\\system32\\com\\dmp\\", "\\windows\\system32\\fxstmp\\", "\\windows\\system32\\spool\\drivers\\color\\", "\\windows\\system32\\spool\\printers\\", "\\windows\\system32\\spool\\servers\\", "\\windows\\syswow64\\com\\dmp\\", "\\windows\\syswow64\\fxstmp\\", "\\windows\\temp\\", "\\windows\\tracing\\"
+    ]
+  description: |
+    Contains Windows directories with world-writable permissions that may be
+    abused for DLL hijacking or malware staging.
+
+- macro: common_security_processes
+  list: [
+    "bitdefender", "bdagent.exe", "bdreinit.exe", "pdscan.exe", "pdiface.exe", "pdiface.exe", "bdsubwiz.exe", "productagentservice.exe", "productagentui.exe", "watchdog.exe", "bdreinit.exe", "carbonblack", "cbdefense", "sensorversion", "carbonblackclientsetup.exe", "checkpoint", "tracsrvwrapper.exe", "tracsrvwrapper.exe", "trgui.exe", "traccapi.exe", "cpmsi_tool.exe", "trac.exe", "vna_install64.exe", "vna_utils.exe", "tracsrvwrapper.exe", "trgui.exe", "tracsrvwrapper.exe", "vsmon.exe", "truevector", "p95tray.exe", "crowdstrike", "windowssensor.x64.exe", "cybereasonransomfreeservicehost.exe", "cybereason", "cybereason activeprobe", "cramtray.exe", "cybereason", "coreminion", "minionhost.exe", "cybereason sensor", "cybereasonsensor.exe", "cylance", "cylance0", "cylance1", "cylance2", "cylanceprotectsetup.exe", "cylancesvc.exe", "cylanceui.exe", "cylanceprotect", "cylanceprotectsetup.exe", "cylancesvc.exe", "cyupdate.exe", "cylanceui.exe", "cynet", "cyops", "cynet eps", "deepinstinct", "deep instinct agent", "deep instinct prevention platform", "deep instinct", "elastic", "elastic-agent.exe", "elastic-endpoint.exe", "elastic-endpoint-driver", "elasticendpoint", "eset", "ecmd", "egui.exe", "ekrn", "minodlogin.exe", "minodlogin", "emu-rep.exe", "emu_install.exe", "emu-cci.exe", "emu-gui.exe", "emu-uninstall.exe", "ndep.exe", "emu-gui.exe", "spike.exe", "eset msp utilities", "ecls.exe", "ecmd.exe", "ecomserver.exe", "eeclnt.exe", "egui.exe", "eh64.exe", "ehttpsrv.exe", "fireeye", "xagt.exe", "fortinet", "collectoragent.exe", "fsaeconfig.exe", "uninstalldcagent.exe", "fmon.exe ", "rmon.exe", "fccomint.exe", "fclanguageselector.exe", "fortifw.exe", "fcreg.exe", "fortitray.exe", "fcappdb.exe", "fcwizard.exe", "submitv.exe", "av_task.exe", "fortiwf.exe", "fortiwadbd.exe", "fcauth.exe", "fcdblog.exe", "fcmgr.exe", "fortiwad.exe", "fortiproxy.exe", "fortiscand.exe", "fortivpnst.exe", "ipsec.exe", "fcwscd7.exe", "fcasc.exe", "fchelper.exe", "forticlient.exe", "fcwsc.exe", "forticlient service scheduler", "forticlient.exe", "av_task.exe", "fortiwad.exe", "fortiproxy.exe", "fcmgr.exe", "fmon.exe", "fssoma.exe", "rmon.exe", "fccomint.exe", "fcvbltscan.exe", "fortiesnac.exe", "fortitray.exe", "fcappdb.exe", "fcconfig.exe", "av_task.exe", "fortiwf.exe", "epcuseravatar.exe", "fortiavatar.exe", "fortifws.exe", "fortiwadbd.exe", "forticlient_diagnostic_tool.exe", "fortisslvpndaemon.exe", "fcauth.exe", "forticlient service scheduler", "av_task.exe", "fortiesnac.exe", "ipsec.exe", "fortiwad.exe", "fortiproxy.exe", "kaspersky", "avp.exe", "avpui.exe", "avpui.exe", "avpsus.exe", "klnagent.exe", "klnsacwsrv.exe", "klnagent.exe", "kl_platf.exe", "stpass.exe", "klnagwds.exe", "malwarebytes", "mbae.exe", "mbae64.exe", "mbae-svc.exe", "mbae-uninstaller.exe", "mbae-svc.exe", "malwarebytes anti-exploit service", "mbae.exe", "mbae-loader.exe ", "mbaeloader32.exe", "mbaeloader64.exe", "mbam-dor.exe", "mbamgui.exe", "mbamservice.exe", "mbamtrayctrl.exe", "mbampt.exe", "mbamscheduler.exe", "malwarebytes anti-rootkit", "mbar-1.08.2.1001.exe ", "coreinst.exe", "mbae-setup.exe", "mcafee", "mcupdate.exe", "protectedmodulehost.exe", "mcafeeagent", "appolicyname", "eppolicyname", "oaspolicyname", "esconfigtool.exe", "fwinstcheck.exe", "fwwindowsfirewallhandler.exe", "mfeesp.exe", "mfefw.exe", "mfeprovisionmodeutility.exe", "mfetp.exe", "wscavexe.exe", "mcshield.exe", "mcchhost.exe", "mfewc.exe", "mfewch.exe", "mfewcui.exe", "fwinfo.exe", "mfecanary.exe", "mfefire.exe", "mfehidin.exe", "mfemms.exe", "mfevtps.exe", "mmsinfo.exe", "vtpinfo.exe", "marsetup.exe", "mctray.exe", "masvc.exe", "macmnsvc.exe", "mfeservicemgr.exe ", "mcapexe.exe", "mcpvtray.exe", "mcods.exe", "mcuicnt.exe", "mcuihost.exe", "mcshield.exe", "xtray.exe", "mcpservice.exe", "epefprtrainer.exe", "mfeffcoreservice.exe", "mfeepesvc.exe", "qualys", "qualysagent.exe", "qualysproxy.exe", "qualysagentui.exe", "sentinelone", "cbdefense", "sensorversion", "sentinelagent", "sentinelmonitor", "sophos", "svrtgui.exe", "svrtcli.exe", "sophos virus removal tool install.exe", "svrtcli.exe", "svrtgui.exe", "sctcleanupservice.exe", "svrtservice.exe", "native.exe", "sctboottasks.exe", "almon.exe", "saa.exe", "sumservice.exe", "svrtservice.exe", "ssp.exe", "scfservice.exe", "scfmanager.exe", "spa.exe", "cabarc.exe", "sargui.exe", "sophos computer security scan.exe", "sntpservice.exe", "mcsclient.exe", "mcsagent.exe", "mcsheartbeat.exe", "savadminservice.exe", "sav32cli.exe", "forceupdatealongsidesgn.exe", "savadminservice.exe", "savcleanupservice.exe", "savmain.exe", "savprogress.exe", "savproxy.exe", "savservice.exe", "swc_service.exe", "swi_di.exe", "swi_service.exe", "swc_service.exe", "swi_filter.exe", "alupdate.exe", "sophosupdate.exe", "almon.exe", "alsvc.exe", "alupdate.exe", "sophosalert.exe", "savmain.exe", "savadminservice.exe", "savcleanupservice.exe", "savservice.exe", "symantec", "symcorpu", "symefasi", "symantec", "norton 360", "oscheck.exe", "n360downloader.exe", "instwrap.exe", "symbos.exe", "nss.exe", "symcorpui.exe", "ispwdsvc.exe", "ccsvchst.exe", "symantec endpoint protection", "deep security agent", "dsa", "notifier", "trend micro", "ntrmv.exe", "pccntmon.exe", "aosuimanager.exe", "ntrtscan.exe", "addinsentry.exe ", "tmas_ol.exe", "tmas_olimp.exe", "tmas_olsentry.exe", "ufnavi.exe", "clnrbin.exe", "vizorhtmldialog.exe", "pwmconsole.exe", "pwmsvc.exe", "coreserviceshell.exe", "ds_agent.exe", "ufnavi.exe", "sfctlcom.exe", "mbamhelper.exe", "management console.exe", "activeconsole", "anti malware", "anti-malware", "antimalware", "anti virus", "anti-virus", "antivirus", "appsense", "authtap", "avast", "avecto", "canary", "carbonblack", "carbon black", "cb.exe", "ciscoamp", "cisco amp", "countercept", "countertack", "cramtray", "crssvc", "crowdstrike", "csagent", "csfalcon", "csshell", "cybereason", "cyclorama", "cylance", "cyoptics", "cyupdate", "cyvera", "cyserver", "cytray", "darktrace", "defendpoint", "defender", "eectrl", "elastic", "endgame", "f-secure", "forcepoint", "fireeye", "groundling", "grrservic", "inspector", "ivanti", "kaspersky", "lacuna", "logrhythm", "malware", "mandiant", "mcafee", "morphisec", "msascuil", "msmpeng", "nissrv", "omni", "omniagent", "osquery", "palo alto networks", "pgeposervice", "pgsystemtray", "privilegeguard", "procwall", "protectorservic", "qradar", "redcloak", "secureworks", "securityhealthservice", "semlaunchsv", "sentinel", "sepliveupdat", "sisidsservice", "sisipsservice", "sisipsutil", "smc.exe", "smcgui", "snac64", "sophos", "splunk", "srtsp", "symantec", "symcorpu", "symefasi", "sysinternal", "sysmon", "tanium", "tda.exe", "tdawork", "tpython", "vectra", "wincollect", "windowssensor", "wireshark", "threat", "xagt.exe", "xagtnotif.exe", "elastic agent", "elastic-agent.exe", "elastic-endpoint.exe", "elastic-endpoint-driver", "elasticendpoint", "ecmd.exe", "ekrn.exe", "eset", "mcupdate.exe", "protectedmodulehost.exe", "dsa.exe", "notifier.exe", "qualys", "qualysagent.exe", "rphcp.exe", "lc_sensor.exe", "refractionpoint hcp", "limacharlie"
+    ]
+  description: |
+    Contains security and EDR process names commonly targeted by attackers
+    for evasion, termination, or process manipulation.
+
+- macro: email_domains
+  list: [
+    "gmail.com", "yahoo.com", "yahoo.fr", "yahoo.co.uk", "yahoo.co.in", "yahoo.es", "yahoo.de", "yahoo.ca", "hotmail.com", "live.com", "outlook.com", "msn.com", "aol.com", "hotmail.co.uk", "hotmail.fr", "mail.ru", "yandex.ru", "yandex.com", "ymail.com", "googlemail.com", "mac.com", "icloud.com", "posteo.de", "protonmail.com", "proton.me", "pm.me", "tutanota.com", "gmx.net", "gmx.de", "1und1.de", "wanadoo.fr", "ig.com.br", "orange.fr", "comcast.net", "rediffmail.com", "free.fr", "web.de", "libero.it", "uol.com.br", "bol.com.br", "rambler.ru", "cox.net", "126.com", "163.com", "yeah.net", "qq.com", "foxmail.com", "sina.com", "sina.net", "sohu.com", "sohu.cn", "sogou.com", "chinaren.com", "sohu.net", "tom.com", "163.net", "aliyun.com", "alice.it", "neuf.fr", "bigpond.com", "earthlink.net"
+    ]
+  description: |
+    Contains common email domains used in phishing attacks and business
+    email compromise campaigns targeting organizations.
+
+- macro: dyndns_domains
+  list: [
+    "mooo.com", "chickenkiller.com", "us.to", "strangled.net", "ignorelist.com", "uk.to", "crabdance.com", "info.tm", "jumpingcrab.com", "twilightparadox.com", "biz.tm", "ax.lt", "my.to", "ftp.sh", "inc.gs", "bum.ms", "cf.gs", "jpe.gs", "na.tl", "sux.ms", "uni.cx", "mil.nf", "now.im", "undo.it", "mine.bz", "bot.nu", "qc.to", "info.gf", "minecraftnoob.com", "3dxtras.com", "home.kg", "t28.net", "shop.tm", "69.mu", "root.sx", "minecraftr.us", "spacetechnology.net", "fr.to", "k.vu", "port0.org", "mooo.info", "1337.cx", "nx.tc", "happyforever.com", "serverpit.com", "evils.in", "csproject.org", "h4ck.me", "verymad.net", "epicgamer.org", "punked.us", "404.mn", "madhacker.biz", "mm.my", "120v.ac", "d-n-s.name", "r-o-o-t.net", "homelinuxserver.org", "h-o-s-t.name", "dynamic-dns.net", "longmusic.com", "wikaba.com", "zzux.com", "dumb1.com", "onedumb.com", "youdontcare.com", "yourtrap.com", "2waky.com", "sexidude.com", "mefound.com", "organiccrap.com", "toythieves.com", "justdied.com", "jungleheart.com", "mrbasic.com", "mrbonus.com", "x24hr.com", "dns04.com", "dns05.com", "zyns.com", "my03.com", "fartit.com", "itemdb.com", "instanthq.com", "xxuz.com", "jkub.com", "itsaol.com", "faqserv.com", "jetos.com", "qpoe.com", "qhigh.com", "vizvaz.com", "mrface.com", "isasecret.com", "mrslove.com", "otzo.com", "americanunfinished.com", "serveusers.com", "serveuser.com", "freetcp.com", "ddns.info", "ns01.info", "ns02.info", "myftp.info", "mydad.info", "mymom.info", "mypicture.info", "myz.info", "squirly.info", "toh.info", "xxxy.info", "freewww.info", "freeddns.com", "myddns.com", "dynamicdns.biz", "ns01.biz", "ns02.biz", "xxxy.biz", "sexxxy.biz", "freewww.biz", "www1.biz", "dhcp.biz", "edns.biz", "ftp1.biz", "mywww.biz", "gr8domain.biz", "gr8name.biz", "ftpserver.biz", "wwwhost.biz", "moneyhome.biz", "port25.biz", "esmtp.biz", "dsmtp.biz", "sixth.biz", "ninth.biz", "misecure.com", "got-game.org", "bigmoney.biz", "dns2.us", "dns1.us", "ns02.us", "ns01.us", "changeip.us", "changeip.biz", "almostmy.com", "ocry.com", "ourhobby.com", "dnsfailover.net", "ygto.com", "ddns.ms", "ddns.us", "gettrials.com", "25u.com", "4dq.com", "4pu.com", "3-a.net", "dsmtp.com", "mynumber.org", "ns1.name", "ns2.name", "ns3.name", "rebatesrule.net", "ezua.com", "sendsmtp.com", "ssmailer.com", "trickip.net", "trickip.org", "dnsrd.com", "lflinkup.com", "lflinkup.net", "lflinkup.org", "lflink.com", "dns-dns.com", "b0tnet.com", "proxydns.com", "changeip.net", "mysecondarydns.com", "changeip.org", "dns-stuff.com", "dynssl.com", "mylftv.com", "mynetav.com", "mynetav.net", "mynetav.org", "dns-report.com", "homingbeacon.net", "ikwb.com", "acmetoy.com", "ddns.mobi", "dnset.com", "as19557.net", "toshibanetcam.com", "authorizeddns.net", "authorizeddns.org", "authorizeddns.us", "cleansite.biz", "cleansite.info", "cleansite.us", "https443.net", "https443.org", "mypop3.net", "mypop3.org", "ssl443.org", "iownyour.biz", "iownyour.org", "onmypc.biz", "onmypc.info", "onmypc.net", "onmypc.org", "onmypc.us", "dubya.info", "dubya.us", "dubya.biz", "dubya.net", "wwwhost.us", "changeip.co", "3d-game.com", "4irc.com", "b0ne.com", "bbsindex.com", "chatnook.com", "darktech.org", "deaftone.com", "dtdns.net", "effers.com", "etowns.net", "etowns.org", "flnet.org", "gotgeeks.com", "scieron.com", "slyip.com", "slyip.net", "suroot.com", "dyndns.org", "dvrdns.org", "dyndns.tv", "dyndns.info", "homeip.net", "dyndns.biz", "mine.nu", "dnsalias.com", "dyndns-ip.com", "selfip.com", "at-band-camp.net", "ath.cx", "barrel-of-knowledge.info", "barrell-of-knowledge.info", "better-than.tv", "blogdns.com", "blogdns.net", "blogdns.org", "blogsite.org", "boldlygoingnowhere.org", "broke-it.net", "buyshouses.net", "cechire.com", "dnsalias.com", "dnsalias.net", "dnsalias.org", "dnsdojo.com", "dnsdojo.net", "dnsdojo.org", "does-it.net", "doesntexist.com", "doesntexist.org", "dontexist.com", "dontexist.net", "dontexist.org", "doomdns.com", "doomdns.org", "dvrdns.org", "dyn-o-saur.com", "dynalias.com", "dynalias.net", "dynalias.org", "dynathome.net", "dyndns-at-home.com", "dyndns-at-work.com", "dyndns-blog.com", "dyndns-free.com", "dyndns-home.com", "dyndns-ip.com", "dyndns-mail.com", "dyndns-office.com", "dyndns-pics.com", "dyndns-remote.com", "dyndns-server.com", "dyndns-web.com", "dyndns-wiki.com", "dyndns-work.com", "dyndns.biz", "dyndns.info", "dyndns.org", "dyndns.tv", "dyndns.ws", "endofinternet.net", "endofinternet.org", "endoftheinternet.org", "est-a-la-maison.com", "est-a-la-masion.com", "est-le-patron.com", "est-mon-blogueur.com", "for-better.biz", "for-more.biz", "for-our.info", "for-some.biz", "for-the.biz", "forgot.her.name", "forgot.his.name", "from-ak.com", "from-al.com", "from-ar.com", "from-az.net", "from-ca.com", "from-co.net", "from-ct.com", "from-dc.com", "from-de.com", "from-fl.com", "from-ga.com", "from-hi.com", "from-ia.com", "from-id.com", "from-il.com", "from-in.com", "from-ks.com", "from-ky.com", "from-la.net", "from-ma.com", "from-md.com", "from-me.org", "from-mi.com", "from-mn.com", "from-mo.com", "from-ms.com", "from-mt.com", "from-nc.com", "from-nd.com", "from-ne.com", "from-nh.com", "from-nj.com", "from-nm.com", "from-nv.com", "from-ny.net", "from-oh.com", "from-ok.com", "from-or.com", "from-pa.com", "from-pr.com", "from-ri.com", "from-sc.com", "from-sd.com", "from-tn.com", "from-tx.com", "from-ut.com", "from-va.com", "from-vt.com", "from-wa.com", "from-wi.com", "from-wv.com", "from-wy.com", "ftpaccess.cc", "fuettertdasnetz.de", "game-host.org", "game-server.cc", "getmyip.com", "gets-it.net", "go.dyndns.org", "gotdns.com", "gotdns.org", "groks-the.info", "groks-this.info", "ham-radio-op.net", "here-for-more.info", "hobby-site.com", "hobby-site.org", "home.dyndns.org", "homedns.org", "homeftp.net", "homeftp.org", "homeip.net", "homelinux.com", "homelinux.net", "homelinux.org", "homeunix.com", "homeunix.net", "homeunix.org", "iamallama.com", "in-the-band.net", "is-a-anarchist.com", "is-a-blogger.com", "is-a-bookkeeper.com", "is-a-bruinsfan.org", "is-a-bulls-fan.com", "is-a-candidate.org", "is-a-caterer.com", "is-a-celticsfan.org", "is-a-chef.com", "is-a-chef.net", "is-a-chef.org", "is-a-conservative.com", "is-a-cpa.com", "is-a-cubicle-slave.com", "is-a-democrat.com", "is-a-designer.com", "is-a-doctor.com", "is-a-financialadvisor.com", "is-a-geek.com", "is-a-geek.net", "is-a-geek.org", "is-a-green.com", "is-a-guru.com", "is-a-hard-worker.com", "is-a-hunter.com", "is-a-knight.org", "is-a-landscaper.com", "is-a-lawyer.com", "is-a-liberal.com", "is-a-libertarian.com", "is-a-linux-user.org", "is-a-llama.com", "is-a-musician.com", "is-a-nascarfan.com", "is-a-nurse.com", "is-a-painter.com", "is-a-patsfan.org", "is-a-personaltrainer.com", "is-a-photographer.com", "is-a-player.com", "is-a-republican.com", "is-a-rockstar.com", "is-a-socialist.com", "is-a-soxfan.org", "is-a-student.com", "is-a-teacher.com", "is-a-techie.com", "is-a-therapist.com", "is-an-accountant.com", "is-an-actor.com", "is-an-actress.com", "is-an-anarchist.com", "is-an-artist.com", "is-an-engineer.com", "is-an-entertainer.com", "is-by.us", "is-certified.com", "is-found.org", "is-gone.com", "is-into-anime.com", "is-into-cars.com", "is-into-cartoons.com", "is-into-games.com", "is-leet.com", "is-lost.org", "is-not-certified.com", "is-saved.org", "is-slick.com", "is-uberleet.com", "is-very-bad.org", "is-very-evil.org", "is-very-good.org", "is-very-nice.org", "is-very-sweet.org", "is-with-theband.com", "isa-geek.com", "isa-geek.net", "isa-geek.org", "isa-hockeynut.com", "issmarterthanyou.com", "isteingeek.de", "istmein.de", "kicks-ass.net", "kicks-ass.org", "knowsitall.info", "land-4-sale.us", "lebtimnetz.de", "leitungsen.de", "likes-pie.com", "likescandy.com", "merseine.com", "merseine.org", "mine.nu", "misconfused.org", "mypets.ws", "myphotos.cc", "neat-url.com", "office-on-the.net", "on-the-web.tv", "podzone.net", "podzone.org", "readmyblog.org", "remotecam.nu", "saves-the-whales.com", "scrapper-site.net", "scrapping.cc", "selfip.biz", "selfip.com", "selfip.info", "selfip.net", "selfip.org", "sells-for-less.com", "sells-for-u.com", "sells-it.net", "sellsyourhome.org", "servebbs.com", "servebbs.net", "servebbs.org", "serveftp.net", "serveftp.org", "servegame.org", "shacknet.biz", "shacknet.us", "shaqnet.nu", "simple-url.com", "space-to-rent.com", "stuff-4-sale.org", "stuff-4-sale.us", "teaches-yoga.com", "thruhere.net", "traeumtgerade.de", "webhop.biz", "webhop.info", "webhop.net", "webhop.org", "worse-than.tv", "writesthisblog.com", "dynu.com", "dynu.net", "freeddns.org", "mywire.org", "ooguy.com", "ddnsfree.com", "webredirect.org", "gleeze.com", "myddns.rocks", "ddnsgeek.com", "accesscam.org", "blogsite.xyz", "camdvr.org", "casacam.net", "giize.com", "kozow.com", "loseyourip.com", "theworkpc.com", "blogsyte.com", "brasilia.me", "cable-modem.org", "ciscofreak.com", "collegefan.org", "couchpotatofries.org", "damnserver.com", "ddns.me", "ditchyourip.com", "dnsfor.me", "dnsiskinky.com", "dvrcam.info", "dynns.com", "eating-organic.net", "fantasyleague.cc", "geekgalaxy.com", "golffan.us", "health-carereform.com", "homesecuritymac.com", "homesecuritypc.com", "hopto.me", "ilovecollege.info", "loginto.me", "mlbfan.org", "mmafan.biz", "myactivedirectory.com", "mydissent.net", "myeffect.net", "mymediapc.net", "mypsx.net", "mysecuritycamera.com", "mysecuritycamera.net", "mysecuritycamera.org", "net-freaks.com", "nflfan.org", "nhlfan.net", "no-ip.ca", "no-ip.co.uk", "no-ip.net", "noip.us", "onthewifi.com", "pgafan.net", "point2this.com", "pointto.us", "privatizehealthinsurance.net", "quicksytes.com", "read-books.org", "securitytactics.com", "serveexchange.com", "servehumour.com", "servep2p.com", "servesarcasm.com", "stufftoread.com", "ufcfan.org", "unusualperson.com", "workisboring.com", "3utilities.com", "bounceme.net", "ddns.net", "ddnsking.com", "gotdns.ch", "hopto.org", "myftp.biz", "myftp.org", "myvnc.com", "no-ip.biz", "no-ip.info", "no-ip.org", "noip.me", "redirectme.net", "servebeer.com", "serveblog.net", "servecounterstrike.com", "serveftp.com", "servegame.com", "servehalflife.com", "servehttp.com", "serveirc.com", "serveminecraft.net", "servemp3.com", "servepics.com", "servequake.com", "sytes.net", "webhop.me", "zapto.org", "001www.com", "16-b.it", "2mydns.net", "32-b.it", "64-b.it", "crafting.xyz", "ddns.cam", "ddnslive.com", "dnsapi.info", "dnsdyn.net", "dnsget.org", "dnsking.ch", "dnslive.net", "dnsup.net", "dtdns.org", "dynip.org", "dynserv.org", "forumz.info", "freeddns.uk", "freeddns.us", "hicam.net", "myddns.biz", "myiphost.com", "mypi.co", "n4t.co", "now-dns.net", "now-dns.org", "now-dns.top", "nowddns.com", "ntdll.top", "ownip.net", "soundcast.me", "tcp4.me", "tftpd.net", "vpndns.net", "wifizone.org", "x443.pw", "1366.co", "1866.co", "3322.la", "5122.co", "5155.co", "5166.info", "51mypc.cn", "51mypc.net", "51vip.biz", "6655.la", "8005566.com", "8005566.com.cn", "8005566.net", "cicp.net", "dnsoray.cn", "dnsoray.com", "dnsoray.net", "ehom.cn", "eicp.net", "exdoris.com", "exhera.com", "faseng.com", "gicp.net", "goho.co", "gtodo.cn", "hicp.net", "hsk.la", "hskrc.com", "huashengbang.com", "iask.in", "iego.cn", "iego.com.cn", "iego.net", "iego.org", "iicp.net", "imbbs.in", "imblog.in", "imdo.co", "imshop.in", "imspace.in", "imtodo.cn", "imwork.net", "imzone.in", "iok.la", "ioray.com", "ke91.com", "kewifi.com", "nat-ddns.com", "oicp.net", "oraybeta.com", "oray.com.cn", "oraydns.cn", "oraydns.net", "orayer.net", "oray.in", "oray.me", "oray.name", "oray.net.cn", "oray.org.cn", "oray.tw", "oray.us", "orayvpn.com", "orayvpn.net", "orgaea.com", "orhebe.com", "orleto.com", "payer.com.cn", "payor.cn", "payor.com.cn", "payor.net", "peanutbox.com", "picp.net", "qicp.net", "sunlogin.cn", "sunlogin.net", "ticp.net", "tudu.co", "uicp.cn", "uicp.net", "vicp.asia", "vicp.cc", "vicp.co", "vicp.la", "vicp.me", "vicp.net", "voeos.com", "vothea.com", "wicp.net", "xicp.cn", "xicp.net", "zicp.net", "2288.org", "3322.org", "6600.org", "7766.org", "8866.org", "9966.org", "eatuo.com", "f3322.net", "f3322.org", "juyide.com", "juyide.net", "juyide.org", "webok.net", "x3322.org", "duckdns.org", "assexyas.com", "athersite.com", "athissite.com", "bestdeals.at", "byinter.net", "findhere.org", "isgre.at", "isthebe.st", "kwikto.com", "lookin.at", "lowestprices.at", "myfw.us", "myredirect.us", "onthenetas.com", "ontheweb.nu", "passas.us", "passinggas.net", "rr.nu", "uglyas.com", "linkpc.net", "publicvm.com", "firewall-gateway.com", "firewall-gateway.de", "firewall-gateway.net", "my-firewall.org", "my-gateway.de", "my-router.de", "myfirewall.org", "spdns.de", "spdns.org", "spdns.eu"
+    ]
+  description: |
+    Contains dynamic DNS domains commonly used by malware for command and
+    control infrastructure and persistence mechanisms.
+
+- macro: container_runtimes
+  list: ["runc", "containerd", "crun", "crio", "containerd-shim"]
+  description: |
+    Contains container runtime executables that may be targeted by attackers
+    for container escape or privilege escalation.
+
+- macro: impacket_modules
+  list: [
+    "Get-GPPPassword", "GetADUsers", "GetNPUsers", "GetUserSPNs", "addcomputer", "atexec", "dcomexec", "dpapi", "exchanger", "findDelegation", "getArch", "getPac", "getST", "getTGT", "goldenPac", "karmaSMB", "keylistattack", "kintercept", "lookupsid", "machine_role", "mimikatz", "mqtt_check", "mssqlclient", "mssqlinstance", "netview", "nmapAnswerMachine", "ntfs-read", "ntlmrelayx", "psexec", "raiseChild", "rdp_check", "registry-read", "rpcdump", "rpcmap", "sambaPipe", "samrdump", "secretsdump", "smbclient", "smbexec", "smbpasswd", "smbrelayx", "smbserver", "sniff", "ticketConverter", "ticketer", "tstool", "wmipersist", "wmiquery"
+    ]
+  description: |
+    Contains Impacket toolkit modules commonly used by attackers for
+    Active Directory exploitation and lateral movement.
+
+- macro: sharpview_modules
+  list: [
+    "Get-DomainGPOUserLocalGroupMapping", "Find-GPOLocation", "Get-DomainGPOComputerLocalGroupMapping", "Find-GPOComputerAdmin", "Get-DomainObjectAcl", "Get-ObjectAcl", "Add-DomainObjectAcl", "Add-ObjectAcl", "Remove-DomainObjectAcl", "Get-RegLoggedOn", "Get-LoggedOnLocal", "Get-NetRDPSession", "Test-AdminAccess", "Invoke-CheckLocalAdminAccess", "Get-WMIProcess", "Get-NetProcess", "Get-WMIRegProxy", "Get-WMIRegLastLoggedOn", "Get-LastLoggedOn", "Get-WMIRegCachedRDPConnection", "Get-CachedRDPConnection", "Get-WMIRegMountedDrive", "Get-RegistryMountedDrive", "Find-InterestingDomainAcl", "Invoke-ACLScanner", "Get-NetShare", "Get-NetLoggedon", "Get-NetLocalGroup", "Get-NetLocalGroupMember", "Get-NetSession", "Get-PathAcl", "ConvertFrom-UACValue", "Get-PrincipalContext", "New-DomainGroup", "New-DomainUser", "Add-DomainGroupMember", "Set-DomainUserPassword", "Invoke-Kerberoast", "Export-PowerViewCSV", "Find-LocalAdminAccess", "Find-DomainLocalGroupMember", "Find-DomainShare", "Find-DomainUserEvent", "Find-DomainProcess", "Find-DomainUserLocation", "Find-InterestingFile", "Find-InterestingDomainShareFile", "Find-DomainObjectPropertyOutlier", "Get-NetDomain", "Get-DomainComputer", "Get-NetComputer", "Get-DomainController", "Get-NetDomainController", "Get-DomainFileServer", "Get-NetFileServer", "Convert-ADName", "Get-DomainObject", "Get-ADObject", "Get-DomainUser", "Get-NetUser", "Get-DomainGroup", "Get-NetGroup", "Get-DomainDFSShare", "Get-DFSshare", "Get-DomainDNSRecord", "Get-DNSRecord", "Get-DomainDNSZone", "Get-DNSZone", "Get-DomainForeignGroupMember", "Find-ForeignGroup", "Get-DomainForeignUser", "Find-ForeignUser", "ConvertFrom-SID", "Convert-SidToName", "Get-DomainGroupMember", "Get-NetGroupMember", "Get-DomainManagedSecurityGroup", "Find-ManagedSecurityGroups", "Get-DomainOU", "Get-NetOU", "Get-DomainSID", "Get-Forest", "Get-NetForest", "Get-ForestTrust", "Get-NetForestTrust", "Get-DomainTrust", "Get-NetDomainTrust", "Get-ForestDomain", "Get-NetForestDomain", "Get-DomainSite", "Get-NetSite", "Get-DomainSubnet", "Get-NetSubnet", "Get-DomainTrustMapping", "Invoke-MapDomainTrust", "Get-ForestGlobalCatalog", "Get-NetForestCatalog", "Get-DomainUserEvent", "Get-UserEvent", "Get-DomainGUIDMap", "Get-GUIDMap", "Resolve-IPAddress", "Get-IPAddress", "ConvertTo-SID", "Invoke-UserImpersonation", "Invoke-RevertToSelf", "Get-DomainSPNTicket", "Request-SPNTicket", "Get-NetComputerSiteName", "Get-SiteName", "Get-DomainGPO", "Get-NetGPO", "Set-DomainObject", "Set-ADObject", "Add-RemoteConnection", "Remove-RemoteConnection", "Get-IniContent", "Get-GptTmpl", "Get-GroupsXML", "Get-DomainPolicyData", "Get-DomainPolicy", "Get-DomainGPOLocalGroup", "Get-NetGPOGroup"
+    ]
+  description: |
+    Contains SharpView PowerShell modules commonly used by attackers for
+    Active Directory enumeration and privilege escalation.
+
+- macro: powerzure_modules
+  list: [
+    "Get-AzureADAppOwner", "Get-AzureADDeviceOwner", "Get-AzureADRoleMember", "Get-AzureCurrentUser", "Get-AzureIntuneScript", "Get-AzureLogicAppConnector", "Get-AzureManagedIdentity", "Get-AzurePIMAssignment", "Get-AzureRunAsAccount", "Get-AzureRolePermission", "Get-AzureSQLDB", "Get-AzureTarget", "Get-AzureTenantId", "Show-AzureKeyVaultContent", "Show-AzureStorageContent", "Add-AzureADRole", "Add-AzureADSPSecret", "Connect-AzureJWT", "Export-AzureKeyVaultContent", "Get-AzureKeyVaultContent", "Get-AzureRunAsCertificate", "Get-AzureRunbookContent", "Get-AzureStorageContent", "Get-AzureVMDisk", "Invoke-AzureCommandRunbook", "Invoke-AzureCustomScriptExtension", "Invoke-AzureRunCommand", "Invoke-AzureRunMSBuild", "Invoke-AzureRunProgram", "Invoke-AzureVMUserDataAgent", "Invoke-AzureVMUserDataCommand", "New-AzureBackdoor", "New-AzureIntuneScript", "Set-AzureElevatedPrivileges", "Start-AzureRunbook"
+    ]
+  description: |
+    Contains PowerZure toolkit modules commonly used by attackers for
+    Azure cloud environment reconnaissance and exploitation.
+
+- macro: azure_privileged_roles
+  list: [
+    "Application Administrator", "Application Developer", "Authentication Administrator", "Authentication Extensibility Administrator", "B2C IEF Keyset Administrator", "Cloud Application Administrator", "Cloud Device Administrator", "Conditional Access Administrator", "Directory Synchronization Accounts", "Directory Writers", "Global Administrator", "Global Reader", "Helpdesk Administrator", "Hybrid Identity Administrator", "Intune Administrator", "Partner Tier1 Support", "Partner Tier2 Support", "Password Administrator", "Privileged Authentication Administrator", "Privileged Role Administrator", "Security Administrator", "Security Operator", "Security Reader", "User Administrator"
+    ]
+  description: |
+    Contains privileged Azure Active Directory roles commonly targeted
+    by attackers for privilege escalation and persistence.

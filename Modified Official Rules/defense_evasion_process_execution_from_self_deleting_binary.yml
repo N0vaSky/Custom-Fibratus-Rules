@@ -45,8 +45,20 @@ condition: >
     | by file.name
     |load_module and ext(image.path) != '.dll'| by image.name
 
-output: >
+output: |
   Process %2.image.path spawned from self-deleting binary
+
+  Process Information:
+
+  - Process Name: %ps.name 
+  - Command Line: %ps.cmdline
+  - Parent Process: %ps.parent.name (PPID: %ps.ppid)
+
+  - Signature Status: %pe.is_signed
+  - Cert Subject: %pe.cert.subject
+  - Cert Issuer: %pe.cert.issuer
+  - Process is Modified?: %pe.is_modified
+
 severity: high
 
 min-engine-version: 2.4.0

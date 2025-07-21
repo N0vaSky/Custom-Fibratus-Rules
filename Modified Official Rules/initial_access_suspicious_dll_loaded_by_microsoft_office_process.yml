@@ -1,0 +1,38 @@
+name: Suspicious DLL loaded by Microsoft Office process
+id: 5868518c-2a83-4b26-ad4b-f14f0b85e744
+version: 1.0.1
+description:
+  Identifies loading of recently dropped DLL by Microsoft Office process.
+labels:
+  tactic.id: TA0001
+  tactic.name: Initial Access
+  tactic.ref: https://attack.mitre.org/tactics/TA0001/
+  technique.id: T1566
+  technique.name: Phishing
+  technique.ref: https://attack.mitre.org/techniques/T1566/
+  subtechnique.id: T1566.001
+  subtechnique.name: Spearphishing Attachment
+  subtechnique.ref: https://attack.mitre.org/techniques/T1566/001/
+
+condition: >
+  sequence
+  maxspan 1h
+    |create_file and (file.extension iin module_extensions or file.is_dll) and ps.name iin msoffice_binaries
+      and
+     file.path not imatches '?:\\Program Files\\Microsoft Office\\Root\\Office*\\*.dll'
+    | by file.name
+    |load_module and ps.name iin msoffice_binaries| by image.name
+
+output: |
+  Process Information:
+
+  - Process Name: %ps.name 
+  - Command Line: %ps.cmdline
+  - Parent Process: %ps.parent.name (PPID: %ps.ppid)
+
+  - Signature Status: %pe.is_signed
+  - Cert Subject: %pe.cert.subject
+  - Cert Issuer: %pe.cert.issuer
+  - Process is Modified?: %pe.is_modified
+
+min-engine-version: 2.0.0
