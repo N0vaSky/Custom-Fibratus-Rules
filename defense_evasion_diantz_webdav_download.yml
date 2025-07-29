@@ -2,10 +2,11 @@ name: Diantz retrieving code from WebDAV server
 id: d7a3c9f1-8e5b-4c2d-9a7e-b8f6d3e2a5c7
 version: 1.0.0
 description: |
-  Detects instances of the Microsoft Cabinet Maker equivalent (diantz.exe) retrieving 
-  code from a WebDAV server and storing contents locally. Attackers abuse this LOLBIN 
-  to download malicious files using UNC paths to WebDAV servers, bypassing traditional 
-  download detection mechanisms.
+  Detects instances of the Microsoft Cabinet Maker (diantz.exe) downloading files 
+  from remote locations using UNC paths, which may indicate WebDAV or SMB access. 
+  Adversaries abuse this LOLBIN to download malicious files bypassing traditional 
+  download detection mechanisms. The rule includes enhanced detection for Alternate 
+  Data Stream (ADS) abuse patterns and various evasion techniques.
 enabled: true
 labels:
   tactic.id: TA0005
@@ -19,6 +20,8 @@ tags:
   - webdav
   - file download
   - living off the land
+  - ads
+  - remote access
 references:
   - https://lolbas-project.github.io/lolbas/Binaries/Diantz/
   - https://attack.mitre.org/techniques/T1218/
@@ -31,9 +34,32 @@ condition: >
     and
   ps.child.exe imatches ('?:\\Windows\\System32\\diantz.exe', '?:\\Windows\\SysWOW64\\diantz.exe')
     and
-  ps.child.cmdline icontains '\\\\'
+  (
+    (ps.child.cmdline icontains '\\\\' and ps.child.cmdline icontains '.cab')
+     or
+    (ps.child.cmdline icontains ':' and not ps.child.cmdline icontains ':\\')
+  )
     and
-  not ps.child.cmdline icontains ('DDNFramework', 'Shoreline')
+  not ps.parent.name in ('msiexec.exe', 'sccm.exe', 'setuphost.exe')
+    and
+  not ps.child.cmdline icontains 
+    (
+      'DDNFramework',
+      'Shoreline', 
+      'Microsoft\\Windows\\Start Menu',
+      'Program Files\\',
+      'ProgramData\\Microsoft',
+      '\\Temp\\Microsoft',
+      'Windows\\Installer'
+    )
+    and
+  not ps.parent.exe imatches 
+    (
+      '?:\\Windows\\System32\\msiexec.exe',
+      '?:\\Windows\\SysWOW64\\msiexec.exe',
+      '?:\\Windows\\ccm\\*.exe',
+      '?:\\Program Files*\\Microsoft Configuration Manager\\*.exe'
+    )
 output: |
   Suspicious diantz.exe WebDAV download detected. Process %ps.exe (PID: %ps.pid) 
   appears to be accessing a UNC/WebDAV path. Command: %ps.cmdline
