@@ -37,7 +37,7 @@ condition: >
     and
   (ps.child.cmdline icontains 'irm' or ps.child.cmdline icontains 'invoke-restmethod')
     and
-  (ps.child.cmdline icontains 'trycloudflare.com' or ps.child.cmdline icontains '.lol' or ps.child.cmdline icontains '.tk' or ps.child.cmdline icontains 'ngrok.io')
+  (ps.child.cmdline icontains 'trycloudflare.com')
 output: |
   Suspicious PowerShell web delivery detected. Process %ps.exe (PID: %ps.pid) is downloading 
   and executing content from trycloudflare.com domain. Command: %ps.cmdline
