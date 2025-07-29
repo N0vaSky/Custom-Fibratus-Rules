@@ -1,0 +1,56 @@
+name: PowerShell using short encoded command switch with bypass options
+id: d8c9a7e5-3f2b-4e7a-8c6d-b9e4f8a7c3d2
+version: 1.0.0
+description: |
+  Detects use of the shortened encodedCommand (-e) flag in PowerShell, combined with 
+  options like -bypass and -nop (NoProfile). This combination is commonly used by 
+  attackers to execute obfuscated payloads while bypassing execution policies and 
+  PowerShell profiles that might contain security controls.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1059
+  technique.name: Command and Scripting Interpreter
+  technique.ref: https://attack.mitre.org/techniques/T1059/
+  subtechnique.id: T1059.001
+  subtechnique.name: PowerShell
+  subtechnique.ref: https://attack.mitre.org/techniques/T1059/001/
+tags:
+  - powershell
+  - encoded command
+  - execution policy bypass
+  - obfuscation
+references:
+  - https://www.trustedsec.com/blog/circumventing-encodedcommand-detection-powershell/
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://attack.mitre.org/techniques/T1027/
+severity: high
+condition: >
+  spawn_process
+    and
+  (ps.child.name in ('powershell.exe', 'pwsh.exe') or ps.child.exe imatches ('?:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe', '?:\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe', '?:\\Program Files\\PowerShell\\7\\pwsh.exe'))
+    and
+  ps.child.cmdline contains ' -e '
+    and
+  (ps.child.cmdline icontains ' hidden ' or ps.child.cmdline icontains ' -nop ' or ps.child.cmdline icontains ' bypass ')
+    and
+  not ps.child.cmdline icontains (' remotesigned ', 'sqlcmd ', 'docker run', 'chocolatey')
+output: |
+  Suspicious PowerShell execution detected. Process %ps.exe (PID: %ps.pid) using encoded 
+  command with bypass options. Parent: %ps.parent.exe. Command: %ps.cmdline
+
+  Notes:
+
+  - The -e flag is the short form of -EncodedCommand for base64 encoded scripts
+  - -bypass skips execution policy restrictions
+  - -nop (NoProfile) prevents loading PowerShell profiles that might log or restrict activity
+  - hidden window style conceals the PowerShell window
+  - T1027 (Obfuscated Files or Information) also applies due to encoded commands
+  - Legitimate use may come from package managers like Chocolatey
+  - Often followed by download and execution of remote payloads
+  - Decode the base64 string after -e to analyze the actual payload
+  - Check for network connections following this execution
+
+min-engine-version: 2.0.0

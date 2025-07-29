@@ -1,0 +1,64 @@
+name: CMSTP loading scrobj.dll for UAC bypass
+id: a8e7f3b9-6c5d-4e2a-9f8b-d3c7b5e9a2f4
+version: 1.0.0
+description: |
+  Detects CMSTP.exe (Microsoft Connection Manager Profile Installer) loading scrobj.dll 
+  upon execution. Adversaries abuse this combination as a User Account Control (UAC) 
+  bypass technique by leveraging COM scriptlets through scrobj.dll to execute malicious 
+  code with elevated privileges without triggering UAC prompts.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1218
+  technique.name: System Binary Proxy Execution
+  technique.ref: https://attack.mitre.org/techniques/T1218/
+  subtechnique.id: T1218.003
+  subtechnique.name: CMSTP
+  subtechnique.ref: https://attack.mitre.org/techniques/T1218/003/
+tags:
+  - uac bypass
+  - cmstp
+  - living off the land
+  - privilege escalation
+references:
+  - https://pentestlab.blog/2018/05/10/applocker-bypass-cmstp/
+  - https://attack.mitre.org/techniques/T1218/003/
+  - https://attack.mitre.org/techniques/T1548/002/
+severity: high
+condition: >
+  sequence
+    maxspan 30s
+    by ps.child.pid
+  |
+    spawn_process
+      and
+    ps.child.name = 'cmstp.exe'
+      and
+    ps.child.exe imatches ('?:\\Windows\\System32\\cmstp.exe', '?:\\Windows\\SysWOW64\\cmstp.exe')
+  |
+  |
+    load_module
+      and
+    ps.name = 'cmstp.exe'
+      and
+    image.name = 'scrobj.dll'
+  |
+output: |
+  UAC bypass attempt detected. CMSTP.exe (PID: %1.ps.pid) loaded scrobj.dll module. 
+  Parent process: %1.ps.parent.exe. This technique bypasses User Account Control.
+
+  Notes:
+
+  - CMSTP.exe is a legitimate Windows binary for installing Connection Manager service profiles
+  - There is no legitimate reason for CMSTP to load scrobj.dll (Script Component Runtime)
+  - This technique allows execution of COM scriptlets with auto-elevation bypassing UAC
+  - T1548.002 (Bypass User Account Control) also applies
+  - Investigate the parent process that spawned CMSTP
+  - Look for file modifications as they are likely malicious
+  - Check for external network connections from CMSTP
+  - Monitor for cross-process activity into other elevated processes
+  - Check for .inf files being used with CMSTP as they contain the malicious scriptlet references
+
+min-engine-version: 2.0.0

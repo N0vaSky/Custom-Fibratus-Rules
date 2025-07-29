@@ -1,0 +1,53 @@
+name: NGINX server spawning PowerShell
+id: f8c6a9e2-5d7b-4c3e-8a9f-b2d7e6c4a8f5
+version: 1.0.0
+description: |
+  Detects instances of PowerShell spawning from the Nginx Server Worker process (nginx.exe). 
+  This behavior can occur during web application exploitation for remote code execution. 
+  While legitimate use may involve web app management scripts, malicious use typically 
+  involves downloading and executing additional payloads or running interactive commands.
+enabled: true
+labels:
+  tactic.id: TA0002
+  tactic.name: Execution
+  tactic.ref: https://attack.mitre.org/tactics/TA0002/
+  technique.id: T1059
+  technique.name: Command and Scripting Interpreter
+  technique.ref: https://attack.mitre.org/techniques/T1059/
+  subtechnique.id: T1059.001
+  subtechnique.name: PowerShell
+  subtechnique.ref: https://attack.mitre.org/techniques/T1059/001/
+tags:
+  - web shell
+  - nginx exploitation
+  - remote code execution
+  - powershell
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://attack.mitre.org/techniques/T1505/003/
+severity: high
+condition: >
+  spawn_process
+    and
+  ps.name = 'nginx.exe'
+    and
+  (
+    ps.child.name in ('powershell.exe', 'pwsh.exe')
+      or
+    ps.child.exe imatches ('?:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe', '?:\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe', '?:\\Program Files\\PowerShell\\7\\pwsh.exe')
+  )
+output: |
+  Suspicious PowerShell execution from NGINX detected. Web server process %ps.parent.exe 
+  spawned %ps.exe (PID: %ps.pid). This may indicate web application exploitation.
+  Command: %ps.cmdline
+
+  Notes:
+  
+  - NGINX spawning PowerShell is highly unusual and often indicates RCE exploitation
+  - Legitimate uses are rare but may include log management or maintenance scripts
+  - Malicious patterns include: downloading files, executing encoded commands, interactive shells
+  - T1505.003 (Web Shell) also applies if a persistent web shell is installed
+  - Investigate the NGINX access logs for exploitation attempts
+  - Check for suspicious web requests preceding this activity
+  - Look for follow-on downloads or lateral movement attempts
+min-engine-version: 2.0.0

@@ -1,0 +1,58 @@
+name: PowerCfg establishing outbound external network connection without CLI
+id: a5d8b3e2-1f9c-4d2e-b7a8-c9e4f5d2a1b6
+version: 1.0.0
+description: |
+  Detects PowerCfg.exe (Windows Power Settings Command-Line Tool) establishing an 
+  outbound external network connection with an empty command line. This behavior is 
+  highly unusual as PowerCfg.exe normally manages power settings locally and has been 
+  observed being abused to spawn Cobalt Strike beacons.
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1218
+  technique.name: System Binary Proxy Execution
+  technique.ref: https://attack.mitre.org/techniques/T1218/
+tags:
+  - cobalt strike
+  - living off the land
+  - lolbin
+references:
+  - https://hstechdocs.helpsystems.com/manuals/cobaltstrike/current/userguide/content/topics/malleable-c2-extend_controll-post-exploitation.htm
+severity: high
+condition: >
+  sequence
+    maxspan 5m
+    by ps.child.pid
+  |
+    spawn_process
+      and
+    (ps.child.name icontains 'powercfg' or ps.child.exe icontains 'powercfg.exe')
+      and
+    ps.child.exe imatches '?:\\Windows\\System32\\powercfg.exe'
+      and
+    ps.child.cmdline = ps.child.exe
+  |
+  |
+    kevt.name = 'Connect'
+      and
+    (ps.name icontains 'powercfg' or ps.exe icontains 'powercfg.exe')
+      and
+    not cidr_contains(net.dip, '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '127.0.0.0/8')
+      and
+    net.dip != '0.0.0.0'
+      and
+    net.dip not in ('0:0:0:0:0:0:0:1', '::1')
+  |
+output: |
+  Suspicious PowerCfg.exe network activity detected. Process %1.ps.exe (PID: %1.ps.pid) 
+  with empty command line established connection to external IP %2.net.dip:%2.net.dport
+
+  Notes:
+
+  - PowerCfg.exe is normally used for power management and rarely makes network connections
+  - Empty command line (ps.cmdline = ps.exe) indicates no arguments were passed
+  - This TTP has been observed with Cobalt Strike beacon deployment
+  - Investigate parent process, network destination, and any subsequent child processes
+
+min-engine-version: 2.0.0

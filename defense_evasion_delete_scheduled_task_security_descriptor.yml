@@ -1,0 +1,47 @@
+name: Deletion of scheduled task Security Descriptor registry key
+id: e9b7d4f2-3c8a-4e6b-9f2d-a8c7b5e3d1f9
+version: 1.0.0
+description: |
+  Detects deletion of the "Security Descriptor" (SD) registry key associated with scheduled 
+  tasks. Adversaries abuse this technique to hide scheduled tasks from inspection by removing 
+  the security descriptor, making the task invisible in standard enumeration tools while it 
+  continues to execute. This behavior has been observed in Tarrask malware campaigns.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1112
+  technique.name: Modify Registry
+  technique.ref: https://attack.mitre.org/techniques/T1112/
+tags:
+  - scheduled task hiding
+  - registry modification
+  - tarrask malware
+  - persistence
+references:
+  - https://www.microsoft.com/security/blog/2022/04/12/tarrask-malware-uses-scheduled-tasks-for-defense-evasion/
+  - https://attack.mitre.org/techniques/T1112/
+severity: high
+condition: >
+  kevt.name = 'RegDeleteKey'
+    and
+  registry.key.name imatches '?*\\CurrentVersion\\Schedule\\TaskCache\\Tree\\*\\SD'
+    and
+  ps.name not in ('setuphost.exe', 'svchost.exe', 'dismhost.exe')
+output: |
+  Suspicious scheduled task hiding detected. Process %ps.exe (PID: %ps.pid) deleted 
+  Security Descriptor key: %registry.key.name. This may indicate an attempt to hide 
+  a malicious scheduled task.
+
+  Notes:
+
+  - Deleting the SD (Security Descriptor) key makes scheduled tasks invisible to standard tools
+  - The task continues to run but cannot be enumerated through normal APIs
+  - This technique was prominently used by Tarrask malware for persistence
+  - Investigate the parent task in TaskCache\Tree directory
+  - Check for associated task files in C:\Windows\System32\Tasks
+  - Look for outbound network connections as adversaries often re-establish C2 communications
+  - Monitor for task execution despite the hidden status
+
+min-engine-version: 2.0.0

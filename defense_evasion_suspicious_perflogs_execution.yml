@@ -1,0 +1,54 @@
+name: Suspicious binary execution from PerfLogs directory
+id: b9d7e4f8-3a6c-4e9d-8b2f-c5e9a7d3f8b2
+version: 1.0.0
+description: |
+  Detects binaries executing from within the PerfLogs directory. This directory is 
+  typically empty, hidden by default, and rarely inspected by administrators, making 
+  it an attractive location for attackers to stage malware. This technique is commonly 
+  observed in ransomware campaigns where threat actors use PerfLogs to host remote 
+  access tools and reconnaissance utilities.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1036
+  technique.name: Masquerading
+  technique.ref: https://attack.mitre.org/techniques/T1036/
+  subtechnique.id: T1036.005
+  subtechnique.name: Match Legitimate Name or Location
+  subtechnique.ref: https://attack.mitre.org/techniques/T1036/005/
+tags:
+  - perflogs abuse
+  - ransomware staging
+  - hidden directory execution
+  - pre-ransomware activity
+references:
+  - https://thedfirreport.com/2020/10/08/ryuks-return/
+  - https://blackpointcyber.com/resources/blog/conti-leak-and-evolving-ransomware/
+  - https://attack.mitre.org/techniques/T1036/005/
+severity: high
+condition: >
+  spawn_process
+    and
+  ps.child.exe icontains '\\perflogs\\'
+    and
+  not ps.child.cmdline icontains ('c:\\perflogs\\mon_', 'addmonwn', 'perflogssvc', '7za.exe')
+output: |
+  Suspicious execution from PerfLogs directory detected. Process %ps.exe (PID: %ps.pid) 
+  launched from hidden directory. Command: %ps.cmdline. This is commonly associated 
+  with ransomware staging and remote access tool deployment.
+
+  Notes:
+
+  - PerfLogs directory (C:\PerfLogs) is hidden by default and typically empty
+  - Legitimate use is extremely rare, usually only for specific admin tools
+  - CRITICAL if remote management tools or port scanners execute from this directory
+  - Common in ransomware campaigns (Ryuk, Conti) for staging tools
+  - Investigate process reputation and check VirusTotal
+  - Examine network connections from this process and child processes
+  - Look for file drops in PerfLogs directory prior to execution
+  - Check for lateral movement or reconnaissance activity
+  - This often precedes ransomware deployment
+min-engine-version: 2.0.0
+

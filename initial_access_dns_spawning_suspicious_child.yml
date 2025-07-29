@@ -1,0 +1,49 @@
+name: DNS Server spawning suspicious child process
+id: d9a3b8e5-7c2f-4e8a-b1d3-a9c5e2f7d8b4
+version: 1.0.0
+description: |
+  Detects instances of the Windows Domain Name System (DNS) Server spawning suspicious 
+  processes. While DNS Server commonly spawns conhost.exe and werfault.exe, execution 
+  of any other binary as a child process should be considered highly suspicious. This 
+  may indicate exploitation of DNS RCE vulnerabilities allowing attackers to run 
+  arbitrary code in the context of the Local System Account.
+enabled: true
+labels:
+  tactic.id: TA0001
+  tactic.name: Initial Access
+  tactic.ref: https://attack.mitre.org/tactics/TA0001/
+  technique.id: T1190
+  technique.name: Exploit Public-Facing Application
+  technique.ref: https://attack.mitre.org/techniques/T1190/
+tags:
+  - dns exploitation
+  - remote code execution
+  - sigred
+  - cve-2020-1350
+references:
+  - https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2020-1350
+  - https://thehackernews.com/2020/07/windows-dns-server-hacking.html
+  - https://attack.mitre.org/techniques/T1190/
+severity: critical
+condition: >
+  spawn_process
+    and
+  ps.name = 'dns.exe'
+    and
+  ps.exe imatches '?:\\Windows\\System32\\dns.exe'
+    and
+  ps.child.name not in ('conhost.exe', 'werfault.exe', 'dns.exe')
+    and
+  not ps.exe icontains 'scripts\\gui\\dns\\bin\\x64'
+output: |
+  Critical: DNS Server spawned suspicious process %ps.exe (PID: %ps.pid). 
+  This may indicate DNS RCE exploitation. Parent: %ps.parent.exe
+
+  Notes:
+  
+  - DNS Server (dns.exe) should only spawn conhost.exe and werfault.exe under normal operations
+  - Any other child process is highly suspicious and may indicate CVE-2020-1350 (SIGRed) exploitation
+  - This vulnerability allows unauthenticated attackers to execute code with SYSTEM privileges
+  - T1210 (Exploitation of Remote Services) may also apply if DNS service is exploited for lateral movement
+  - Immediate investigation required - check DNS logs and network traffic for exploitation attempts
+min-engine-version: 2.0.0

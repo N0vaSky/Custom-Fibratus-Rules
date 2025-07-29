@@ -1,0 +1,60 @@
+name: CMD possible DOSfuscation with multiple SET commands
+id: e2b7c4a8-9d5f-4b3a-8c7e-d1f9a3b5c2e7
+version: 1.0.0
+description: |
+  Detects instances of the Windows Command Processor (cmd.exe) with command lines that 
+  set numerous variables in a single command. Adversaries commonly use this technique 
+  as a method of command obfuscation to evade detection. Malicious use involves SET 
+  commands to create variables containing other commands that may be executed, often 
+  with odd and unrecognizable syntax patterns.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1059
+  technique.name: Command and Scripting Interpreter
+  technique.ref: https://attack.mitre.org/techniques/T1059/
+  subtechnique.id: T1059.003
+  subtechnique.name: Windows Command Shell
+  subtechnique.ref: https://attack.mitre.org/techniques/T1059/003/
+tags:
+  - dosfuscation
+  - obfuscation
+  - command shell abuse
+references:
+  - https://www.fireeye.com/content/dam/fireeye-www/blog/pdfs/dosfuscation-report.pdf
+  - https://attack.mitre.org/techniques/T1059/003/
+  - https://attack.mitre.org/techniques/T1027/
+severity: high
+condition: >
+  spawn_process
+    and
+  (ps.child.name = 'cmd.exe' or ps.child.exe imatches ('?:\\Windows\\System32\\cmd.exe', '?:\\Windows\\SysWOW64\\cmd.exe'))
+    and
+  (
+    regex(ps.child.cmdline, '(?i)set.*set.*set')
+      and
+    regex(ps.child.cmdline, '(?i)call.*call')
+      and
+    regex(ps.child.cmdline, '\\%[^\\s]{1,25}\\%')
+  )
+    and
+  ps.name not in ('ienrcore.exe', 'twexec.exe', 'nmake.exe', 'node.exe', 'forfiles.exe')
+    and
+  not ps.exe icontains 'tripwire'
+    and
+  not ps.child.cmdline icontains ('echo On Error Resume', 'nessus_', 'do_vbsUpload():', 'twg.vbs & echo', 'QT_PLUGIN_PATH=', 'url:covdirs')
+output: |
+  Possible DOSfuscation detected in cmd.exe. Process %ps.exe (PID: %ps.pid) executed with 
+  multiple SET commands and variable references. Command line: %ps.cmdline
+
+  Notes:
+
+  - Normal cmd.exe SET usage involves legitimate variable assignments in scripts
+  - Malicious usage shows obfuscated patterns like: 's^e^t=1 s^e^t=2' or 'set=1 not-se t'
+  - Look for odd variable names, unusual character escaping, and encoded commands
+  - T1027 (Obfuscated Files or Information) may also apply
+  - Check if variables are being used to reconstruct and execute hidden commands
+  - Investigate parent process and any subsequent child processes
+min-engine-version: 2.0.0

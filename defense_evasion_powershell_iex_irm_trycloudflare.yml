@@ -1,0 +1,54 @@
+name: PowerShell downloading and executing script from trycloudflare domain
+id: a7c5e9d3-4b8f-2e6a-9d1c-f8b7a3e5c2d9
+version: 1.0.0
+description: |
+  Detects PowerShell using Invoke-RestMethod (irm) to download and execute a script 
+  via Invoke-Expression (iex) from a trycloudflare domain. Malicious actors frequently 
+  use trycloudflare domains to host malicious payloads, similar to NGROK and other 
+  dynamic hosting DNS services for command and control infrastructure.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1059
+  technique.name: Command and Scripting Interpreter
+  technique.ref: https://attack.mitre.org/techniques/T1059/
+  subtechnique.id: T1059.001
+  subtechnique.name: PowerShell
+  subtechnique.ref: https://attack.mitre.org/techniques/T1059/001/
+tags:
+  - powershell
+  - web delivery
+  - trycloudflare
+  - remote execution
+  - tunneling service abuse
+references:
+  - https://redcanary.com/blog/threat-intelligence/mocha-manakin-nodejs-backdoor/
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://attack.mitre.org/techniques/T1102/
+severity: high
+condition: >
+  spawn_process
+    and
+  (ps.child.name in ('powershell.exe', 'pwsh.exe') or ps.child.exe imatches ('?:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe', '?:\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe', '?:\\Program Files\\PowerShell\\7\\pwsh.exe'))
+    and
+  (ps.child.cmdline icontains 'iex' or ps.child.cmdline icontains 'invoke-expression')
+    and
+  (ps.child.cmdline icontains 'irm' or ps.child.cmdline icontains 'invoke-restmethod')
+    and
+  (ps.child.cmdline icontains 'trycloudflare.com' or ps.child.cmdline icontains '.lol' or ps.child.cmdline icontains '.tk' or ps.child.cmdline icontains 'ngrok.io')
+output: |
+  Suspicious PowerShell web delivery detected. Process %ps.exe (PID: %ps.pid) is downloading 
+  and executing content from trycloudflare.com domain. Command: %ps.cmdline
+
+  Notes:
+
+  - TryCloudflare is a free tunneling service often abused by attackers for C2 infrastructure
+  - The combination of IEX (Invoke-Expression) and IRM (Invoke-RestMethod) indicates remote code execution
+  - T1102 (Web Service) also applies as trycloudflare is used as a communication channel
+  - Investigate follow-on domains and child processes spawned by PowerShell
+  - Check for persistence mechanisms and lateral movement attempts
+  - Consider blocking trycloudflare.com domains at the perimeter if not business-required
+
+min-engine-version: 2.0.0

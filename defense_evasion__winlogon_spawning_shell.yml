@@ -1,0 +1,57 @@
+name: Winlogon spawning shell process
+id: b7e3c4d2-8f1a-4c3e-9d2f-a5b6e7c8d9f0
+version: 1.0.0
+description: |
+  Detects instances where the Windows Logon Process (winlogon.exe) spawns either 
+  cmd.exe or powershell.exe. While winlogon.exe may legitimately spawn shells for 
+  logon scripts, this parent-child relationship is often abused by attackers for 
+  persistence via registry modifications to Shell or Userinit values.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1547
+  technique.name: Boot or Logon Autostart Execution
+  technique.ref: https://attack.mitre.org/techniques/T1547/
+  subtechnique.id: T1547.004
+  subtechnique.name: Winlogon Helper DLL
+  subtechnique.ref: https://attack.mitre.org/techniques/T1547/004/
+tags:
+  - persistence
+  - winlogon abuse
+  - registry persistence
+references:
+  - https://securitybytes.io/blue-team-fundamentals-part-two-windows-processes-759fe15965e2
+  - https://blog.malwarebytes.com/cybercrime/2016/05/tech-support-scammers-using-winlogon/
+  - https://attack.mitre.org/techniques/T1547/004/
+severity: high
+condition: >
+  spawn_process
+    and
+  ps.name = 'winlogon.exe'
+    and
+  ps.exe imatches '?:\\Windows\\System32\\winlogon.exe'
+    and
+  (
+    ps.child.name in ('cmd.exe', 'powershell.exe')
+      or
+    ps.child.exe imatches ('?:\\Windows\\System32\\cmd.exe', '?:\\Windows\\SysWOW64\\cmd.exe')
+      or
+    ps.child.exe imatches ('?:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe', '?:\\Windows\\SysWOW64\\WindowsPowerShell\\v1.0\\powershell.exe')
+  )
+    and
+    not
+  ps.child.cmdline icontains ('bank-ftp', 'smstspostupgrade')
+output: |
+  Suspicious shell spawned by Winlogon detected. %ps.parent.exe spawned %ps.exe with 
+  command line: %ps.cmdline. This may indicate persistence via registry modification.
+
+  Notes:
+
+  - Legitimate logon scripts may trigger this rule - check for similar patterns across multiple machines
+  - Investigate registry keys HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Shell 
+    and HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Winlogon\Userinit for modifications
+  - Look for registry modifications by other processes prior to this event
+  - Consider T1059.001 (PowerShell) and T1059.003 (Windows Command Shell) as related techniques
+min-engine-version: 2.0.0

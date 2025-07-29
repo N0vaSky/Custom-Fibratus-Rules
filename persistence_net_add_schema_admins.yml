@@ -1,0 +1,57 @@
+name: User added to Schema Admins group via net command
+id: f4e8d2c1-7a5b-4c9e-8f3d-b2a7e5c9d1f6
+version: 1.0.0
+description: |
+  Detects a user being added to the Schema Admins user group via the net command. 
+  While system administrators may legitimately add users to this group through 
+  provisioning scripts, malicious actors and penetration testers commonly abuse 
+  this to take full control of a domain and maintain persistence.
+enabled: true
+labels:
+  tactic.id: TA0003
+  tactic.name: Persistence
+  tactic.ref: https://attack.mitre.org/tactics/TA0003/
+  technique.id: T1078
+  technique.name: Valid Accounts
+  technique.ref: https://attack.mitre.org/techniques/T1078/
+  subtechnique.id: T1078.002
+  subtechnique.name: Domain Accounts
+  subtechnique.ref: https://attack.mitre.org/techniques/T1078/002/
+tags:
+  - privilege escalation
+  - active directory
+  - schema admins
+  - domain persistence
+references:
+  - https://www.ired.team/offensive-security-experiments/active-directory-kerberos-abuse/abusing-active-directory-acls-aces
+  - https://attack.mitre.org/techniques/T1078/002/
+severity: critical
+condition: >
+  spawn_process
+    and
+  (ps.child.name = 'net.exe' or ps.child.name = 'net1.exe')
+    and
+  ps.child.exe imatches ('?:\\Windows\\System32\\net.exe', '?:\\Windows\\SysWOW64\\net.exe', '?:\\Windows\\System32\\net1.exe', '?:\\Windows\\SysWOW64\\net1.exe')
+    and
+  ps.child.cmdline icontains 'net'
+    and
+  ps.child.cmdline icontains 'group'
+    and
+  ps.child.cmdline icontains 'Schema Admins'
+    and
+  ps.child.cmdline icontains '/add'
+    and
+  not ps.child.cmdline icontains 'localgroup'
+output: |
+  Critical: User added to Schema Admins group. Process %ps.exe (PID: %ps.pid) executed: %ps.cmdline
+  This grants full control over the Active Directory domain.
+
+  Notes:
+
+  - Schema Admins is the most privileged group in Active Directory with ability to modify the AD schema
+  - Members have full control over all domain objects and can create backdoors in the schema
+  - Legitimate use is extremely rare - schema changes are typically done during major AD upgrades
+  - Investigate the user account being added and the process that initiated this command
+  - Check for other privilege escalation attempts and domain-wide changes
+  - Consider this a critical security incident requiring immediate response
+min-engine-version: 2.0.0

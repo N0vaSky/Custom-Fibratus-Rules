@@ -1,0 +1,49 @@
+name: Regsvr32 spawning Microsoft Sync Center
+id: c8f5a7d3-2e1b-4a9c-8b7d-f3c2e1a9d5b8
+version: 1.0.0
+description: |
+  Detects the Register Server process (regsvr32.exe) spawning the Microsoft Sync Center 
+  (mobsync.exe). This behavior does not occur normally and should be considered suspicious. 
+  Qakbot malware has been observed injecting into processes like mobsync.exe or explorer.exe 
+  and using them to spawn malicious binaries.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1218
+  technique.name: System Binary Proxy Execution
+  technique.ref: https://attack.mitre.org/techniques/T1218/
+  subtechnique.id: T1218.010
+  subtechnique.name: Regsvr32
+  subtechnique.ref: https://attack.mitre.org/techniques/T1218/010/
+tags:
+  - qakbot
+  - process injection
+  - living off the land
+references:
+  - https://www.fortinet.com/blog/threat-research/deep-analysis-of-a-qbot-campaign-part-1
+  - https://attack.mitre.org/techniques/T1218/010/
+severity: high
+condition: >
+  spawn_process
+    and
+  ps.name icontains 'regsvr32'
+    and
+  ps.exe imatches ('?:\\Windows\\System32\\regsvr32.exe', '?:\\Windows\\SysWOW64\\regsvr32.exe')
+    and
+  ps.child.name icontains 'mobsync'
+    and
+  ps.child.exe imatches ('?:\\Windows\\System32\\mobsync.exe', '?:\\Windows\\SysWOW64\\mobsync.exe')
+output: |
+  Suspicious process spawning detected: %ps.parent.exe spawned %ps.exe. 
+  This unusual parent-child relationship may indicate Qakbot or similar malware activity.
+
+  Notes:
+
+  - This behavior is highly unusual and likely indicates malicious activity
+  - Qakbot commonly uses this technique for process injection and evasion
+  - Investigate parent process command line and any network connections
+  - Check for other suspicious child processes from regsvr32.exe
+  - Look for evidence of DLL registration attempts prior to this event
+min-engine-version: 2.0.0

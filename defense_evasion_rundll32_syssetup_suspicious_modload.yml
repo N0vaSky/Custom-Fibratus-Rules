@@ -1,0 +1,66 @@
+name: Rundll32 syssetup.dll loading suspicious modules
+id: c9f8a3e7-2d6b-4a8c-9e5f-b7d2c4a9e6f8
+version: 1.0.0
+description: |
+  Detects suspicious instances of rundll32.exe executing with syssetup.dll command line 
+  arguments and loading modules typically observed with application whitelisting bypass. 
+  Adversaries utilize this technique to retrieve and execute remote payloads by abusing 
+  the INF SCT fetch & execute technique for bypass, evasion, and persistence.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1218
+  technique.name: System Binary Proxy Execution
+  technique.ref: https://attack.mitre.org/techniques/T1218/
+  subtechnique.id: T1218.011
+  subtechnique.name: Rundll32
+  subtechnique.ref: https://attack.mitre.org/techniques/T1218/011/
+tags:
+  - rundll32
+  - application whitelisting bypass
+  - inf sct
+  - living off the land
+references:
+  - https://bohops.com/2018/02/26/leveraging-inf-sct-fetch-execute-techniques-for-bypass-evasion-persistence/
+  - https://github.com/LOLBAS-Project/LOLBAS/blob/94368c1e69a6ce5ce812f2b331c99b89a63791b9/yml/OSLibraries/Advpack.yml
+  - https://twitter.com/bohops/status/967486047839014913?s=20
+  - https://attack.mitre.org/techniques/T1218/011/
+severity: high
+condition: >
+  sequence
+    maxspan 30s
+    by ps.child.pid
+  |
+    spawn_process
+      and
+    ps.child.name = 'rundll32.exe'
+      and
+    ps.child.exe imatches ('?:\\Windows\\System32\\rundll32.exe', '?:\\Windows\\SysWOW64\\rundll32.exe')
+      and
+    ps.child.cmdline icontains 'syssetup.dll'
+  |
+  |
+    load_module
+      and
+    ps.name = 'rundll32.exe'
+      and
+    image.name in ('scrobj.dll', 'clr.dll', 'jscript.dll')
+  |
+output: |
+  Suspicious rundll32.exe activity detected. Process %1.ps.exe (PID: %1.ps.pid) with syssetup.dll 
+  loaded suspicious module %2.image.name. This may indicate application whitelisting bypass attempt.
+
+  Notes:
+
+  - INF SCT technique abuses rundll32.exe with syssetup.dll to execute remote payloads
+  - scrobj.dll indicates COM scriptlet execution
+  - clr.dll indicates .NET code execution
+  - jscript.dll indicates JavaScript execution
+  - T1129 (Shared Modules) and T1059.007 (JavaScript) may also apply
+  - Check for child processes spawned by rundll32
+  - Look for cmstp.exe loading config files from unusual directories
+  - Investigate parent process and prevalence of this activity
+  - Multiple DLLs under .NET folder may indicate malicious activity
+min-engine-version: 2.0.0

@@ -1,0 +1,47 @@
+name: Tobii Service executing from suspicious directory
+id: b8d9f3e2-6a7c-4d8e-9f2b-c7e8a9d5b4f1
+version: 1.0.0
+description: |
+  Detects Tobii.Service.exe being executed from directories outside of Program Files, 
+  which may indicate DLL search order hijacking. This OEM software vulnerability allows 
+  attackers to load malicious DLLs by placing the legitimate binary in user-controlled 
+  directories where malicious DLLs can be side-loaded.
+enabled: true
+labels:
+  tactic.id: TA0005
+  tactic.name: Defense Evasion
+  tactic.ref: https://attack.mitre.org/tactics/TA0005/
+  technique.id: T1574
+  technique.name: Hijack Execution Flow
+  technique.ref: https://attack.mitre.org/techniques/T1574/
+  subtechnique.id: T1574.002
+  subtechnique.name: DLL Side-Loading
+  subtechnique.ref: https://attack.mitre.org/techniques/T1574/002/
+tags:
+  - dll hijacking
+  - search order hijacking
+  - tobii service
+  - oem software abuse
+references:
+  - https://www.safebreach.com/blog/oem-software-puts-multiple-laptops-at-risk/
+  - https://attack.mitre.org/techniques/T1574/002/
+severity: high
+condition: >
+  spawn_process
+    and
+  ps.child.name = 'Tobii.Service.exe'
+    and
+  not ps.child.exe icontains 'program files'
+output: |
+  Suspicious Tobii Service execution detected. %ps.exe (PID: %ps.pid) running from 
+  non-standard directory. This may indicate DLL search order hijacking attempt.
+
+  Notes:
+
+  - Tobii.Service.exe should normally run from Program Files directory
+  - When executed from user directories, it may load malicious DLLs from the same directory
+  - Check for DLLs loaded from the same directory as the executable
+  - Investigate how the binary was written to the current location
+  - Look for parent process that dropped or copied the file
+  - This technique exploits legitimate OEM software for defense evasion
+min-engine-version: 2.0.0
