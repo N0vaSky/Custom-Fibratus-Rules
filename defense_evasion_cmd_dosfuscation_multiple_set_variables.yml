@@ -30,7 +30,7 @@ severity: high
 condition: >
   spawn_process
     and
-  (ps.child.name = 'cmd.exe' or ps.child.exe imatches ('?:\\Windows\\System32\\cmd.exe', '?:\\Windows\\SysWOW64\\cmd.exe'))
+  ps.child.name = 'cmd.exe' 
     and
   (
     regex(ps.child.cmdline, '(?i)set.*set.*set')
@@ -40,9 +40,9 @@ condition: >
     regex(ps.child.cmdline, '\\%[^\\s]{1,25}\\%')
   )
     and
-  ps.name not in ('ienrcore.exe', 'twexec.exe', 'nmake.exe', 'node.exe', 'forfiles.exe')
+  ps.parent.name not in ('ienrcore.exe', 'twexec.exe', 'nmake.exe', 'node.exe', 'forfiles.exe')
     and
-  not ps.exe icontains 'tripwire'
+  not ps.parent.exe icontains 'tripwire'
     and
   not ps.child.cmdline icontains ('echo On Error Resume', 'nessus_', 'do_vbsUpload():', 'twg.vbs & echo', 'QT_PLUGIN_PATH=', 'url:covdirs')
 output: |
